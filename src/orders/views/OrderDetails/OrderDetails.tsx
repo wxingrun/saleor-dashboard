@@ -18,10 +18,12 @@ import { useNotifier } from "@dashboard/hooks/useNotifier";
 import { getMutationState } from "@dashboard/misc";
 import getOrderErrorMessage from "@dashboard/utils/errors/order";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
+import { useEffect } from "react";
 import { useIntl } from "react-intl";
 
 import OrderOperations from "../../containers/OrderOperations";
 import { orderListUrl, orderUrl, type OrderUrlDialog, type OrderUrlQueryParams } from "../../urls";
+import { addRecentlyVisited } from "../../../components/Sidebar/recentlyVisited/utils";
 import { handleOrderDetailsSubmit } from "./handleOrderDetailsSubmit";
 import { orderDetailsMessages } from "./messages";
 import { OrderDetailsMessages } from "./OrderDetailsMessages";
@@ -83,6 +85,19 @@ const OrderDetails = ({ id, params }: OrderDetailsProps) => {
   if (order === null) {
     return <NotFoundPage onBack={handleBack} />;
   }
+
+  useEffect(() => {
+    const orderNumber = order?.number ?? order?.id;
+    if (orderNumber) {
+      addRecentlyVisited({
+        id,
+        type: "order",
+        name: `#${orderNumber}`,
+        url: orderUrl(id),
+        timestamp: Date.now(),
+      });
+    }
+  }, [id, order?.number, order?.id]);
 
   const isOrderUnconfirmed = order?.status === OrderStatus.UNCONFIRMED;
   const isOrderDraft = order?.status === OrderStatus.DRAFT;

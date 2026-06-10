@@ -2,6 +2,7 @@ import { AllRipplesModal } from "@dashboard/ripples/components/AllRipplesModal";
 import { useAllRipplesModalState } from "@dashboard/ripples/state";
 import { Box } from "@saleor/macaw-ui-next";
 
+import { RecentlyVisited } from "./recentlyVisited/RecentlyVisited";
 import { DeprecationBanner } from "./DeprecationBanner/DeprecationBanner";
 import { Menu } from "./menu";
 import { MountingPoint } from "./MountingPoint";
@@ -20,6 +21,7 @@ export const SidebarContent = () => {
     >
       <Box>
         <MountingPoint />
+        <RecentlyVisited />
         <DeprecationBanner />
       </Box>
       <Menu />

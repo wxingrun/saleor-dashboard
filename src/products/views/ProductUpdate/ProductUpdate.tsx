@@ -41,6 +41,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { useAssignAttributeValueDialogFilterChangeHandlers } from "../../../components/AssignAttributeValueDialog/useAssignAttributeValueDialogFilterChangeHandlers";
+import { addRecentlyVisited } from "../../../components/Sidebar/recentlyVisited/utils";
 import { getMutationState } from "../../../misc";
 import { ProductMetadataDialog } from "../../components/ProductMetadataDialog/ProductMetadataDialog";
 import ProductUpdatePage from "../../components/ProductUpdatePage";
@@ -484,6 +485,18 @@ const ProductUpdate = ({ id, params }: ProductUpdateProps) => {
     onFetchMore: loadMoreAttributeValues,
   };
   const { taxClasses, fetchMoreTaxClasses } = useTaxClassFetchMore();
+
+  useEffect(() => {
+    if (product?.name) {
+      addRecentlyVisited({
+        id,
+        type: "product",
+        name: product.name,
+        url: productUrl(id),
+        timestamp: Date.now(),
+      });
+    }
+  }, [id, product?.name]);
 
   if (product === null) {
     return <NotFoundPage onBack={handleBack} />;

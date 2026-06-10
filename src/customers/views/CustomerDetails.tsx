@@ -6,6 +6,7 @@ import { useRemoveCustomerMutation, useUpdateCustomerMutation } from "@dashboard
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { useNotifier } from "@dashboard/hooks/useNotifier";
 import { extractMutationErrors, getStringOrPlaceholder } from "@dashboard/misc";
+import { useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import CustomerDetailsPage, {
@@ -15,6 +16,7 @@ import { CustomerMetadataDialog } from "../components/CustomerMetadataDialog/Cus
 import { useCustomerDetails } from "../hooks/useCustomerDetails";
 import { CustomerDetailsProvider } from "../providers/CustomerDetailsProvider";
 import { customerListUrl, customerUrl, type CustomerUrlQueryParams } from "../urls";
+import { addRecentlyVisited } from "../../components/Sidebar/recentlyVisited/utils";
 
 interface CustomerDetailsViewProps {
   id: string;
@@ -58,6 +60,17 @@ const CustomerDetailsViewInner = ({ id, params }: CustomerDetailsViewProps) => {
   if (user === null) {
     return <NotFoundPage backHref={customerListUrl()} />;
   }
+
+  useEffect(() => {
+    const customerName = user?.email || user?.firstName || user?.lastName || id;
+    addRecentlyVisited({
+      id,
+      type: "customer",
+      name: customerName,
+      url: customerUrl(id),
+      timestamp: Date.now(),
+    });
+  }, [id, user?.email, user?.firstName, user?.lastName]);
 
   const handleSubmit = async (data: CustomerDetailsPageFormData) => {
     const result = await updateCustomer({

@@ -1,0 +1,126 @@
+diff --git a/src/components/Sidebar/Content.tsx b/src/components/Sidebar/Content.tsx
+index 19a30d3f0..bdc7c532b 100644
+--- a/src/components/Sidebar/Content.tsx
++++ b/src/components/Sidebar/Content.tsx
+@@ -2,6 +2,7 @@ import { AllRipplesModal } from "@dashboard/ripples/components/AllRipplesModal";
+ import { useAllRipplesModalState } from "@dashboard/ripples/state";
+ import { Box } from "@saleor/macaw-ui-next";
+ 
++import { RecentlyVisited } from "./recentlyVisited/RecentlyVisited";
+ import { DeprecationBanner } from "./DeprecationBanner/DeprecationBanner";
+ import { Menu } from "./menu";
+ import { MountingPoint } from "./MountingPoint";
+@@ -20,6 +21,7 @@ export const SidebarContent = () => {
+     >
+       <Box>
+         <MountingPoint />
++        <RecentlyVisited />
+         <DeprecationBanner />
+       </Box>
+       <Menu />
+diff --git a/src/customers/views/CustomerDetails.tsx b/src/customers/views/CustomerDetails.tsx
+index 110bbd0cd..d736c1e77 100644
+--- a/src/customers/views/CustomerDetails.tsx
++++ b/src/customers/views/CustomerDetails.tsx
+@@ -6,6 +6,7 @@ import { useRemoveCustomerMutation, useUpdateCustomerMutation } from "@dashboard
+ import useNavigator from "@dashboard/hooks/useNavigator";
+ import { useNotifier } from "@dashboard/hooks/useNotifier";
+ import { extractMutationErrors, getStringOrPlaceholder } from "@dashboard/misc";
++import { useEffect } from "react";
+ import { FormattedMessage, useIntl } from "react-intl";
+ 
+ import CustomerDetailsPage, {
+@@ -15,6 +16,7 @@ import { CustomerMetadataDialog } from "../components/CustomerMetadataDialog/Cus
+ import { useCustomerDetails } from "../hooks/useCustomerDetails";
+ import { CustomerDetailsProvider } from "../providers/CustomerDetailsProvider";
+ import { customerListUrl, customerUrl, type CustomerUrlQueryParams } from "../urls";
++import { addRecentlyVisited } from "../../components/Sidebar/recentlyVisited/utils";
+ 
+ interface CustomerDetailsViewProps {
+   id: string;
+@@ -59,6 +61,17 @@ const CustomerDetailsViewInner = ({ id, params }: CustomerDetailsViewProps) => {
+     return <NotFoundPage backHref={customerListUrl()} />;
+   }
+ 
++  useEffect(() => {
++    const customerName = user?.email || user?.firstName || user?.lastName || id;
++    addRecentlyVisited({
++      id,
++      type: "customer",
++      name: customerName,
++      url: customerUrl(id),
++      timestamp: Date.now(),
++    });
++  }, [id, user?.email, user?.firstName, user?.lastName]);
++
+   const handleSubmit = async (data: CustomerDetailsPageFormData) => {
+     const result = await updateCustomer({
+       variables: {
+diff --git a/src/orders/views/OrderDetails/OrderDetails.tsx b/src/orders/views/OrderDetails/OrderDetails.tsx
+index 32af53763..e18cc5fb5 100644
+--- a/src/orders/views/OrderDetails/OrderDetails.tsx
++++ b/src/orders/views/OrderDetails/OrderDetails.tsx
+@@ -18,10 +18,12 @@ import { useNotifier } from "@dashboard/hooks/useNotifier";
+ import { getMutationState } from "@dashboard/misc";
+ import getOrderErrorMessage from "@dashboard/utils/errors/order";
+ import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
++import { useEffect } from "react";
+ import { useIntl } from "react-intl";
+ 
+ import OrderOperations from "../../containers/OrderOperations";
+ import { orderListUrl, orderUrl, type OrderUrlDialog, type OrderUrlQueryParams } from "../../urls";
++import { addRecentlyVisited } from "../../../components/Sidebar/recentlyVisited/utils";
+ import { handleOrderDetailsSubmit } from "./handleOrderDetailsSubmit";
+ import { orderDetailsMessages } from "./messages";
+ import { OrderDetailsMessages } from "./OrderDetailsMessages";
+@@ -84,6 +86,19 @@ const OrderDetails = ({ id, params }: OrderDetailsProps) => {
+     return <NotFoundPage onBack={handleBack} />;
+   }
+ 
++  useEffect(() => {
++    const orderNumber = order?.number ?? order?.id;
++    if (orderNumber) {
++      addRecentlyVisited({
++        id,
++        type: "order",
++        name: `#${orderNumber}`,
++        url: orderUrl(id),
++        timestamp: Date.now(),
++      });
++    }
++  }, [id, order?.number, order?.id]);
++
+   const isOrderUnconfirmed = order?.status === OrderStatus.UNCONFIRMED;
+   const isOrderDraft = order?.status === OrderStatus.DRAFT;
+   const handleSubmit = async (formData: MetadataIdSchema) =>
+diff --git a/src/products/views/ProductUpdate/ProductUpdate.tsx b/src/products/views/ProductUpdate/ProductUpdate.tsx
+index 096650c8e..2cbfc4580 100644
+--- a/src/products/views/ProductUpdate/ProductUpdate.tsx
++++ b/src/products/views/ProductUpdate/ProductUpdate.tsx
+@@ -41,6 +41,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
+ import { FormattedMessage, useIntl } from "react-intl";
+ 
+ import { useAssignAttributeValueDialogFilterChangeHandlers } from "../../../components/AssignAttributeValueDialog/useAssignAttributeValueDialogFilterChangeHandlers";
++import { addRecentlyVisited } from "../../../components/Sidebar/recentlyVisited/utils";
+ import { getMutationState } from "../../../misc";
+ import { ProductMetadataDialog } from "../../components/ProductMetadataDialog/ProductMetadataDialog";
+ import ProductUpdatePage from "../../components/ProductUpdatePage";
+@@ -485,6 +486,18 @@ const ProductUpdate = ({ id, params }: ProductUpdateProps) => {
+   };
+   const { taxClasses, fetchMoreTaxClasses } = useTaxClassFetchMore();
+ 
++  useEffect(() => {
++    if (product?.name) {
++      addRecentlyVisited({
++        id,
++        type: "product",
++        name: product.name,
++        url: productUrl(id),
++        timestamp: Date.now(),
++      });
++    }
++  }, [id, product?.name]);
++
+   if (product === null) {
+     return <NotFoundPage onBack={handleBack} />;
+   }
