@@ -80,15 +80,16 @@ export function useRefundWithinReturn({
   };
 }
 
-export const squashLines = (items: GrantRefundInputLine[]): GrantRefundInputLine[] =>
-  Object.values(
-    items.reduce<Record<string, GrantRefundInputLine>>(
-      (acc, item) => ({
-        ...acc,
-        [item.id]: acc[item.id]
-          ? { ...item, quantity: acc[item.id].quantity + item.quantity }
-          : item,
-      }),
-      {},
-    ),
-  );
+export const squashLines = (items: GrantRefundInputLine[]): GrantRefundInputLine[] => {
+  const merged: Record<string, GrantRefundInputLine> = {};
+
+  for (const item of items) {
+    if (merged[item.id]) {
+      merged[item.id].quantity += item.quantity;
+    } else {
+      merged[item.id] = { ...item };
+    }
+  }
+
+  return Object.values(merged);
+};
