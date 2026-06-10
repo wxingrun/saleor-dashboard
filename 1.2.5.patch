@@ -1,0 +1,115 @@
+diff --git a/src/translations/views/EntityLists/TranslationsProductList.tsx b/src/translations/views/EntityLists/TranslationsProductList.tsx
+index 7f8c2ad0a..db571409e 100644
+--- a/src/translations/views/EntityLists/TranslationsProductList.tsx
++++ b/src/translations/views/EntityLists/TranslationsProductList.tsx
+@@ -1,9 +1,8 @@
+-// @ts-strict-ignore
+-import { useProductTranslationsQuery } from "@dashboard/graphql";
++import { type ProductTranslationsQuery, useProductTranslationsQuery } from "@dashboard/graphql";
+ import usePaginator, { PaginatorContext } from "@dashboard/hooks/usePaginator";
++import { type TranslatableEntity } from "@dashboard/translations/components/TranslationsEntitiesList";
+ import TranslationsEntitiesList from "@dashboard/translations/components/TranslationsEntitiesList";
+ import { languageEntityUrl, TranslatableEntities } from "@dashboard/translations/urls";
+-import { mapEdgesToItems } from "@dashboard/utils/maps";
+ 
+ import { type TranslationsEntityListProps } from "./types";
+ import { sumCompleted } from "./utils";
+@@ -19,32 +18,47 @@ const TranslationsProductList = ({ params, variables }: TranslationsEntityListPr
+     queryString: params,
+   });
+ 
++  const entities = mapProductTranslationsToEntities(data);
++
+   return (
+     <PaginatorContext.Provider value={paginationValues}>
+       <TranslationsEntitiesList
+         data-test-id="translation-list-view"
+         disabled={loading}
+-        entities={mapEdgesToItems(data?.translations)?.map(
+-          node =>
+-            node.__typename === "ProductTranslatableContent" && {
+-              completion: {
+-                current: sumCompleted([
+-                  node.translation?.description,
+-                  node.translation?.name,
+-                  node.translation?.seoDescription,
+-                  node.translation?.seoTitle,
+-                  ...(node.attributeValues?.map(({ translation }) => translation?.richText) || []),
+-                ]),
+-                max: 4 + (node.attributeValues?.length || 0),
+-              },
+-              id: node?.product?.id,
+-              name: node?.product?.name,
+-            },
+-        )}
++        entities={entities}
+         getRowHref={id => languageEntityUrl(variables.language, TranslatableEntities.products, id)}
+       />
+     </PaginatorContext.Provider>
+   );
+ };
+ 
++function mapProductTranslationsToEntities(
++  data: ProductTranslationsQuery | undefined,
++): TranslatableEntity[] {
++  if (!data?.translations?.edges) {
++    return [];
++  }
++
++  return data.translations.edges.reduce<TranslatableEntity[]>((acc, { node }) => {
++    if (node.__typename === "ProductTranslatableContent") {
++      acc.push({
++        completion: {
++          current: sumCompleted([
++            node.translation?.description,
++            node.translation?.name,
++            node.translation?.seoDescription,
++            node.translation?.seoTitle,
++            ...(node.attributeValues?.map(({ translation }) => translation?.richText) || []),
++          ]),
++          max: 4 + (node.attributeValues?.length || 0),
++        },
++        id: node.product?.id ?? "",
++        name: node.product?.name ?? "",
++      });
++    }
++
++    return acc;
++  }, []);
++}
++
+ export default TranslationsProductList;
+diff --git a/src/translations/views/TranslationsProducts.tsx b/src/translations/views/TranslationsProducts.tsx
+index 34246a54d..c6d9502bb 100644
+--- a/src/translations/views/TranslationsProducts.tsx
++++ b/src/translations/views/TranslationsProducts.tsx
+@@ -1,6 +1,7 @@
+-// @ts-strict-ignore
+ import {
+   type LanguageCodeEnum,
++  type UpdateAttributeValueTranslationsMutation,
++  type UpdateProductTranslationsMutation,
+   useProductTranslationDetailsQuery,
+   useUpdateAttributeValueTranslationsMutation,
+   useUpdateProductTranslationsMutation,
+@@ -46,10 +47,18 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
+     }
+   };
+   const [updateTranslations, updateTranslationsOpts] = useUpdateProductTranslationsMutation({
+-    onCompleted: data => onUpdate(data.productTranslate.errors),
++    onCompleted: (data: UpdateProductTranslationsMutation) => {
++      if (data.productTranslate) {
++        onUpdate(data.productTranslate.errors);
++      }
++    },
+   });
+   const [updateAttributeValueTranslations] = useUpdateAttributeValueTranslationsMutation({
+-    onCompleted: data => onUpdate(data.attributeValueTranslate.errors),
++    onCompleted: (data: UpdateAttributeValueTranslationsMutation) => {
++      if (data.attributeValueTranslate) {
++        onUpdate(data.attributeValueTranslate.errors);
++      }
++    },
+   });
+   const onEdit = (field: string | string[]) =>
+     navigate(

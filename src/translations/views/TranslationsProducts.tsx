@@ -1,6 +1,7 @@
-// @ts-strict-ignore
 import {
   type LanguageCodeEnum,
+  type UpdateAttributeValueTranslationsMutation,
+  type UpdateProductTranslationsMutation,
   useProductTranslationDetailsQuery,
   useUpdateAttributeValueTranslationsMutation,
   useUpdateProductTranslationsMutation,
@@ -46,10 +47,18 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
     }
   };
   const [updateTranslations, updateTranslationsOpts] = useUpdateProductTranslationsMutation({
-    onCompleted: data => onUpdate(data.productTranslate.errors),
+    onCompleted: (data: UpdateProductTranslationsMutation) => {
+      if (data.productTranslate) {
+        onUpdate(data.productTranslate.errors);
+      }
+    },
   });
   const [updateAttributeValueTranslations] = useUpdateAttributeValueTranslationsMutation({
-    onCompleted: data => onUpdate(data.attributeValueTranslate.errors),
+    onCompleted: (data: UpdateAttributeValueTranslationsMutation) => {
+      if (data.attributeValueTranslate) {
+        onUpdate(data.attributeValueTranslate.errors);
+      }
+    },
   });
   const onEdit = (field: string | string[]) =>
     navigate(
