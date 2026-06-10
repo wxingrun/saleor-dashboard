@@ -40,7 +40,9 @@ import { getColumnSortDirectionIcon } from "@dashboard/utils/columns/getColumnSo
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { type GridCell, type Item } from "@glideapps/glide-data-grid";
 import { type DefaultTheme } from "@saleor/macaw-ui-next";
-import { type IntlShape } from "react-intl";
+import { Fragment, createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { FormattedDate, RawIntlProvider, type IntlShape } from "react-intl";
 
 import { getAttributeIdFromColumnValue } from "../ProductListPage/utils";
 import { categoryMetaGroups, columnsMessages } from "./messages";
@@ -76,7 +78,7 @@ export const productListStaticColumnAdapter = ({
       width: 250,
     },
     {
-      id: "date",
+      id: ProductListUrlSortField.LAST_MODIFIED_AT,
       title: intl.formatMessage(columnsMessages.updatedAt),
       width: 300,
     },
@@ -103,7 +105,16 @@ export const productListStaticColumnAdapter = ({
     },
   ].map(column => ({
     ...column,
-    icon: getColumnSortDirectionIcon(sort, column.id),
+    icon:
+      column.id === ProductListUrlSortField.LAST_MODIFIED_AT && sort.sort === ProductListUrlSortField.date
+        ? getColumnSortDirectionIcon(
+            {
+              ...sort,
+              sort: ProductListUrlSortField.LAST_MODIFIED_AT,
+            },
+            ProductListUrlSortField.LAST_MODIFIED_AT,
+          )
+        : getColumnSortDirectionIcon(sort, column.id),
   }));
 
 export const productListDynamicColumnAdapter = ({
@@ -217,8 +228,8 @@ export function createGetCellContent({
         return getNameCellContent(change, rowData);
       case "price":
         return getPriceCellContent(intl, channel);
-      case "date":
-        return getDateCellContent(rowData);
+      case ProductListUrlSortField.LAST_MODIFIED_AT:
+        return getLastModifiedAtCellContent(intl, rowData);
       case "created":
         return getCreatedCellContent(rowData);
       case "productCategory":
@@ -239,8 +250,38 @@ export function createGetCellContent({
 
 const COMMON_CELL_PROPS: Partial<GridCell> = { cursor: "pointer" };
 
-function getDateCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {
-  return dateCell(rowData?.updatedAt, COMMON_CELL_PROPS);
+function getLastModifiedAtCellContent(
+  intl: IntlShape,
+  rowData: RelayToFlat<ProductListQuery["products"]>[number],
+) {
+  if (!rowData?.updatedAt) {
+    return readonlyTextCell("-", true);
+  }
+
+  const value = renderToStaticMarkup(
+    createElement(
+      RawIntlProvider,
+      { value: intl },
+      createElement(
+        Fragment,
+        null,
+        createElement(FormattedDate, { value: rowData.updatedAt, year: "numeric" }),
+        "-",
+        createElement(FormattedDate, { value: rowData.updatedAt, month: "2-digit" }),
+        "-",
+        createElement(FormattedDate, { value: rowData.updatedAt, day: "2-digit" }),
+        " ",
+        createElement(FormattedDate, {
+          value: rowData.updatedAt,
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }),
+      ),
+    ),
+  );
+
+  return readonlyTextCell(value, true);
 }
 
 function getCreatedCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {

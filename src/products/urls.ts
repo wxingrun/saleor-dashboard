@@ -74,6 +74,7 @@ export enum ProductListUrlSortField {
   price = "price",
   rank = "rank",
   date = "date",
+  LAST_MODIFIED_AT = "lastModifiedAt",
   created = "created",
 }
 type ProductListUrlSort = Sort<ProductListUrlSortField>;
