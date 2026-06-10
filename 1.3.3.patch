@@ -1,0 +1,274 @@
+diff --git a/src/graphql/types.generated.ts b/src/graphql/types.generated.ts
+index babd0eb8e..6bb83282b 100644
+--- a/src/graphql/types.generated.ts
++++ b/src/graphql/types.generated.ts
+@@ -12946,7 +12946,7 @@ export type ProductListQueryVariables = Exact<{
+ }>;
+ 
+ 
+-export type ProductListQuery = { __typename: 'Query', products: { __typename: 'ProductCountableConnection', totalCount: number | null, edges: Array<{ __typename: 'ProductCountableEdge', node: { __typename: 'Product', updatedAt: any, created: any, description: string | null, id: string, name: string, attributes: Array<{ __typename: 'SelectedAttribute', attribute: { __typename: 'Attribute', id: string }, values: Array<{ __typename: 'AttributeValue', id: string, name: string | null, slug: string | null, reference: string | null, boolean: boolean | null, date: string | null, dateTime: any | null, value: string | null, file: { __typename: 'File', url: string, contentType: string | null } | null }> }>, thumbnail: { __typename: 'Image', url: string } | null, productType: { __typename: 'ProductType', id: string, name: string, hasVariants: boolean }, category?: { __typename: 'Category', id: string, name: string } | null, collections?: Array<{ __typename: 'Collection', id: string, name: string }> | null, channelListings: Array<{ __typename: 'ProductChannelListing', id: string, isPublished: boolean, publishedAt: any | null, isAvailableForPurchase: boolean | null, availableForPurchaseAt: any | null, visibleInListings: boolean, pricing?: { __typename: 'ProductPricingInfo', priceRange: { __typename: 'TaxedMoneyRange', start: { __typename: 'TaxedMoney', net: { __typename: 'Money', amount: number, currency: string } } | null, stop: { __typename: 'TaxedMoney', net: { __typename: 'Money', amount: number, currency: string } } | null } | null } | null, channel: { __typename: 'Channel', id: string, name: string, slug: string, currencyCode: string } }> | null } }>, pageInfo: { __typename: 'PageInfo', hasPreviousPage: boolean, hasNextPage: boolean, startCursor: string | null, endCursor: string | null } } | null };
++export type ProductListQuery = { __typename: 'Query', products: { __typename: 'ProductCountableConnection', totalCount: number | null, edges: Array<{ __typename: 'ProductCountableEdge', node: { __typename: 'Product', updatedAt: any, created: any, lastModifiedAt: any | null, description: string | null, id: string, name: string, attributes: Array<{ __typename: 'SelectedAttribute', attribute: { __typename: 'Attribute', id: string }, values: Array<{ __typename: 'AttributeValue', id: string, name: string | null, slug: string | null, reference: string | null, boolean: boolean | null, date: string | null, dateTime: any | null, value: string | null, file: { __typename: 'File', url: string, contentType: string | null } | null }> }>, thumbnail: { __typename: 'Image', url: string } | null, productType: { __typename: 'ProductType', id: string, name: string, hasVariants: boolean }, category?: { __typename: 'Category', id: string, name: string } | null, collections?: Array<{ __typename: 'Collection', id: string, name: string }> | null, channelListings: Array<{ __typename: 'ProductChannelListing', id: string, isPublished: boolean, publishedAt: any | null, isAvailableForPurchase: boolean | null, availableForPurchaseAt: any | null, visibleInListings: boolean, pricing?: { __typename: 'ProductPricingInfo', priceRange: { __typename: 'TaxedMoneyRange', start: { __typename: 'TaxedMoney', net: { __typename: 'Money', amount: number, currency: string } } | null, stop: { __typename: 'TaxedMoney', net: { __typename: 'Money', amount: number, currency: string } } | null } | null } | null, channel: { __typename: 'Channel', id: string, name: string, slug: string, currencyCode: string } }> | null } }>, pageInfo: { __typename: 'PageInfo', hasPreviousPage: boolean, hasNextPage: boolean, startCursor: string | null, endCursor: string | null } } | null };
+ 
+ export type ProductCountQueryVariables = Exact<{
+   filter?: InputMaybe<ProductFilterInput>;
+diff --git a/src/products/components/ProductListDatagrid/datagrid.ts b/src/products/components/ProductListDatagrid/datagrid.ts
+index 86093c30b..e69d242a2 100644
+--- a/src/products/components/ProductListDatagrid/datagrid.ts
++++ b/src/products/components/ProductListDatagrid/datagrid.ts
+@@ -85,6 +85,11 @@ export const productListStaticColumnAdapter = ({
+       title: intl.formatMessage(columnsMessages.created),
+       width: 300,
+     },
++    {
++      id: "lastModifiedAt",
++      title: intl.formatMessage(columnsMessages.lastModifiedAt),
++      width: 300,
++    },
+     {
+       id: "price",
+       title: intl.formatMessage(columnsMessages.price),
+@@ -221,6 +226,8 @@ export function createGetCellContent({
+         return getDateCellContent(rowData);
+       case "created":
+         return getCreatedCellContent(rowData);
++      case "lastModifiedAt":
++        return getLastModifiedAtCellContent(rowData);
+       case "productCategory":
+         return getCategoryCellContent(theme, rowData);
+       case "productCollections":
+@@ -247,6 +254,10 @@ function getCreatedCellContent(rowData: RelayToFlat<ProductListQuery["products"]
+   return dateCell(rowData?.created, COMMON_CELL_PROPS);
+ }
+ 
++function getLastModifiedAtCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {
++  return dateCell(rowData?.lastModifiedAt, COMMON_CELL_PROPS);
++}
++
+ function getProductTypeCellContent(
+   theme: DefaultTheme,
+   rowData: RelayToFlat<ProductListQuery["products"]>[number],
+diff --git a/src/products/components/ProductListDatagrid/messages.ts b/src/products/components/ProductListDatagrid/messages.ts
+index 356224689..18d2ee618 100644
+--- a/src/products/components/ProductListDatagrid/messages.ts
++++ b/src/products/components/ProductListDatagrid/messages.ts
+@@ -45,6 +45,11 @@ export const columnsMessages = defineMessages({
+     defaultMessage: "Created at",
+     description: "product created at",
+   },
++  lastModifiedAt: {
++    id: "productList/lastModifiedAt",
++    defaultMessage: "Last modified at",
++    description: "product last modified at",
++  },
+   category: {
+     id: "9qKFTA",
+     defaultMessage: "Category",
+diff --git a/src/products/fixtures.ts b/src/products/fixtures.ts
+index 9c4c5276e..4341898dc 100644
+--- a/src/products/fixtures.ts
++++ b/src/products/fixtures.ts
+@@ -1217,6 +1217,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     attributes: [],
+     channelListings: [
+       {
+@@ -1315,6 +1316,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     attributes: [],
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+@@ -1415,6 +1417,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     attributes: [],
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+@@ -1515,6 +1518,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -1637,6 +1641,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -1759,6 +1764,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -1882,6 +1888,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -2004,6 +2011,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -2126,6 +2134,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -2250,6 +2259,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     attributes: [
+       {
+         __typename: "SelectedAttribute",
+@@ -2370,6 +2380,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -2492,6 +2503,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -2614,6 +2626,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -2736,6 +2749,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -2858,6 +2872,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -2980,6 +2995,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -3102,6 +3118,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -3224,6 +3241,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -3346,6 +3364,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+@@ -3468,6 +3487,7 @@ export const products = (placeholderImage: string): RelayToFlat<ProductListQuery
+     __typename: "Product",
+     updatedAt: "2020-06-22T13:52:05.094636+00:00",
+     created: "2020-06-22T13:52:05.094636+00:00",
++    lastModifiedAt: "2020-06-22T13:52:05.094636+00:00",
+     description:
+       "Fell straight from the tree, on to Newton's head, then into the bottle. The autumn taste of English apples. Brought to you by gravity.",
+     attributes: [
+diff --git a/src/products/queries.ts b/src/products/queries.ts
+index 9c3fc3724..981db8015 100644
+--- a/src/products/queries.ts
++++ b/src/products/queries.ts
+@@ -31,6 +31,7 @@ export const productListQuery = gql`
+           ...ProductWithChannelListings
+           updatedAt
+           created
++          lastModifiedAt
+           description
+           attributes {
+             ...ProductListAttribute
+diff --git a/src/products/urls.ts b/src/products/urls.ts
+index e3e4f4e6d..16d549536 100644
+--- a/src/products/urls.ts
++++ b/src/products/urls.ts
+@@ -75,6 +75,7 @@ export enum ProductListUrlSortField {
+   rank = "rank",
+   date = "date",
+   created = "created",
++  lastModifiedAt = "lastModifiedAt",
+ }
+ type ProductListUrlSort = Sort<ProductListUrlSortField>;
+ export interface ProductListUrlQueryParams
+diff --git a/src/products/views/ProductList/sort.ts b/src/products/views/ProductList/sort.ts
+index db2fcaa0d..6ea47ccc0 100644
+--- a/src/products/views/ProductList/sort.ts
++++ b/src/products/views/ProductList/sort.ts
+@@ -11,6 +11,7 @@ export function canBeSorted(sort: ProductListUrlSortField, isChannelSelected: bo
+     case ProductListUrlSortField.productType:
+     case ProductListUrlSortField.date:
+     case ProductListUrlSortField.created:
++    case ProductListUrlSortField.lastModifiedAt:
+     case ProductListUrlSortField.attribute:
+     case ProductListUrlSortField.rank:
+       return true;
+@@ -38,6 +39,8 @@ function getSortQueryField(sort: ProductListUrlSortField): ProductOrderField {
+       return ProductOrderField.DATE;
+     case ProductListUrlSortField.created:
+       return ProductOrderField.CREATED_AT;
++    case ProductListUrlSortField.lastModifiedAt:
++      return ProductOrderField.LAST_MODIFIED_AT;
+     default:
+       return undefined;
+   }
