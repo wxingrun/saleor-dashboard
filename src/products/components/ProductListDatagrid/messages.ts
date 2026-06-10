@@ -40,6 +40,11 @@ export const columnsMessages = defineMessages({
     defaultMessage: "Last updated",
     description: "product updated at",
   },
+  lastModifiedAt: {
+    id: "lastModifiedAt",
+    defaultMessage: "Last modified at",
+    description: "product last modified at",
+  },
   created: {
     id: "acgbDa",
     defaultMessage: "Created at",

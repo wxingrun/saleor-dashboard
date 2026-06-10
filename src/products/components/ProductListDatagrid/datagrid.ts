@@ -86,6 +86,11 @@ export const productListStaticColumnAdapter = ({
       width: 300,
     },
     {
+      id: "lastModifiedAt",
+      title: intl.formatMessage(columnsMessages.lastModifiedAt),
+      width: 300,
+    },
+    {
       id: "price",
       title: intl.formatMessage(columnsMessages.price),
       width: 250,
@@ -221,6 +226,8 @@ export function createGetCellContent({
         return getDateCellContent(rowData);
       case "created":
         return getCreatedCellContent(rowData);
+      case "lastModifiedAt":
+        return getLastModifiedAtCellContent(rowData);
       case "productCategory":
         return getCategoryCellContent(theme, rowData);
       case "productCollections":
@@ -245,6 +252,10 @@ function getDateCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[n
 
 function getCreatedCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {
   return dateCell(rowData?.created, COMMON_CELL_PROPS);
+}
+
+function getLastModifiedAtCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {
+  return dateCell(rowData?.updatedAt, COMMON_CELL_PROPS);
 }
 
 function getProductTypeCellContent(
