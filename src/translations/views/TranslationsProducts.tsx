@@ -1,6 +1,7 @@
-// @ts-strict-ignore
 import {
   type LanguageCodeEnum,
+  type UpdateAttributeValueTranslationsMutation,
+  type UpdateProductTranslationsMutation,
   useProductTranslationDetailsQuery,
   useUpdateAttributeValueTranslationsMutation,
   useUpdateProductTranslationsMutation,
@@ -16,8 +17,6 @@ import { extractMutationErrors, maybe } from "../../misc";
 import { TranslationsProductsPage } from "../components/TranslationsProductsPage";
 import { type TranslationField, type TranslationInputFieldName } from "../types";
 import { getAttributeValueTranslationsInputData, getParsedTranslationInputData } from "../utils";
-
-type HandleSubmitAttributeValue = OutputData | string;
 
 export interface TranslationsProductsQueryParams {
   activeField: string;
@@ -46,10 +45,11 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
     }
   };
   const [updateTranslations, updateTranslationsOpts] = useUpdateProductTranslationsMutation({
-    onCompleted: data => onUpdate(data.productTranslate.errors),
+    onCompleted: (data: UpdateProductTranslationsMutation) => onUpdate(data.productTranslate.errors),
   });
   const [updateAttributeValueTranslations] = useUpdateAttributeValueTranslationsMutation({
-    onCompleted: data => onUpdate(data.attributeValueTranslate.errors),
+    onCompleted: (data: UpdateAttributeValueTranslationsMutation) =>
+      onUpdate(data.attributeValueTranslate.errors),
   });
   const onEdit = (field: string | string[]) =>
     navigate(
@@ -81,17 +81,16 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
     );
   };
 
-  const handleSubmit = (
-    { name: fieldName }: TranslationField<TranslationInputFieldName>,
-    data: string,
-  ) => {
+  const handleSubmit = (field: TranslationField, data: string | OutputData) => {
+    const fieldName = field.name;
+
     return extractMutationErrors(
       updateTranslations({
         variables: {
           id,
           input: getParsedTranslationInputData({
             data,
-            fieldName,
+            fieldName: fieldName as TranslationInputFieldName,
           }),
           language: languageCode,
         },
@@ -120,15 +119,12 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
       return errors;
     });
   };
-  const handleAttributeValueSubmit = (
-    { id, type }: TranslationField<TranslationInputFieldName>,
-    data: HandleSubmitAttributeValue,
-  ) =>
+  const handleAttributeValueSubmit = (field: TranslationField, data: string | OutputData) =>
     extractMutationErrors(
       updateAttributeValueTranslations({
         variables: {
-          id,
-          input: getAttributeValueTranslationsInputData(type, data),
+          id: field.id!,
+          input: getAttributeValueTranslationsInputData(field.type, data),
           language: languageCode,
         },
       }),
@@ -142,7 +138,7 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
       activeField={params.activeField}
       disabled={productTranslations.loading || updateTranslationsOpts.loading}
       languageCode={languageCode}
-      languages={maybe(() => shop.languages, [])}
+      languages={maybe(() => shop!.languages, [])}
       saveButtonState={updateTranslationsOpts.status}
       onEdit={onEdit}
       onDiscard={onDiscard}
