@@ -18,6 +18,10 @@ COPY *.d.ts ./
 COPY schema-main.graphql ./
 COPY .featureFlags/ .featureFlags/
 
+COPY src/fragments/ src/fragments/
+
+RUN pnpm run generate:main
+
 COPY src/ src/
 
 ARG API_URL
@@ -33,7 +37,6 @@ ENV EXTENSIONS_API_URL="${EXTENSIONS_API_URL}"
 ENV STATIC_URL="${STATIC_URL:-/dashboard/}"
 ENV SKIP_SOURCEMAPS="${SKIP_SOURCEMAPS:-true}"
 ENV LOCALE_CODE="${LOCALE_CODE:-EN}"
-RUN pnpm run generate:main
 RUN pnpm exec cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build
 
 FROM nginx:stable-alpine AS runner
