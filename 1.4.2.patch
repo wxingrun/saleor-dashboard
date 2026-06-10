@@ -1,0 +1,107 @@
+diff --git a/src/channels/validation.test.ts b/src/channels/validation.test.ts
+index b18b6ae58..226ae5c4e 100644
+--- a/src/channels/validation.test.ts
++++ b/src/channels/validation.test.ts
+@@ -120,4 +120,102 @@ describe("validateChannelFormData", () => {
+       ]),
+     );
+   });
++
++  it("should return no errors when slug contains invalid characters (Scenario 1)", () => {
++    // Arrange
++    const data: FormData = {
++      ...validFormData,
++      slug: "INVALID SLUG !@#$",
++    };
++
++    // Act
++    const errors = validateChannelFormData(data);
++
++    // Assert
++    expect(errors).toEqual([]);
++  });
++
++  it("should return error when currencyCode is an empty string (Scenario 2)", () => {
++    // Arrange
++    const data: FormData = {
++      ...validFormData,
++      currencyCode: "",
++    };
++
++    // Act
++    const errors = validateChannelFormData(data);
++
++    // Assert
++    expect(errors).toEqual([
++      {
++        __typename: "ChannelError",
++        code: ChannelErrorCode.REQUIRED,
++        field: "currencyCode",
++        message: null,
++      },
++    ]);
++  });
++
++  it("should return no errors when defaultCountry is an invalid ISO 3166-1 alpha-2 code (Scenario 3)", () => {
++    // Arrange
++    const data: FormData = {
++      ...validFormData,
++      defaultCountry: "XX" as CountryCode,
++    };
++
++    // Act
++    const errors = validateChannelFormData(data);
++
++    // Assert
++    expect(errors).toEqual([]);
++  });
++
++  it("should return no errors when defaultCountry is a valid ISO 3166-1 alpha-2 code (Scenario 4)", () => {
++    // Arrange
++    const data: FormData = {
++      ...validFormData,
++      defaultCountry: "CN" as CountryCode,
++    };
++
++    // Act
++    const errors = validateChannelFormData(data);
++
++    // Assert
++    expect(errors).toEqual([]);
++  });
++
++  it("should return error when slug is an empty string (Scenario 5)", () => {
++    // Arrange
++    const data: FormData = {
++      ...validFormData,
++      slug: "",
++    };
++
++    // Act
++    const errors = validateChannelFormData(data);
++
++    // Assert
++    expect(errors).toEqual([
++      {
++        __typename: "ChannelError",
++        code: ChannelErrorCode.REQUIRED,
++        field: "slug",
++        message: null,
++      },
++    ]);
++  });
++
++  it("should return no errors when slug length exceeds 50 characters (Scenario 6)", () => {
++    // Arrange
++    const data: FormData = {
++      ...validFormData,
++      slug: "a".repeat(51),
++    };
++
++    // Act
++    const errors = validateChannelFormData(data);
++
++    // Assert
++    expect(errors).toEqual([]);
++  });
+ });
