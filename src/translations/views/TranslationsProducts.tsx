@@ -1,4 +1,3 @@
-// @ts-strict-ignore
 import {
   type LanguageCodeEnum,
   useProductTranslationDetailsQuery,
@@ -22,10 +21,16 @@ type HandleSubmitAttributeValue = OutputData | string;
 export interface TranslationsProductsQueryParams {
   activeField: string;
 }
+
 interface TranslationsProductsProps {
   id: string;
   languageCode: LanguageCodeEnum;
   params: TranslationsProductsQueryParams;
+}
+
+interface AttributeValueTranslationField extends TranslationField<TranslationInputFieldName> {
+  id: string;
+  type?: string;
 }
 
 const TranslationsProducts = ({ id, languageCode, params }: TranslationsProductsProps) => {
@@ -36,7 +41,7 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
   const productTranslations = useProductTranslationDetailsQuery({
     variables: { id, language: languageCode },
   });
-  const onUpdate = (errors: unknown[]) => {
+  const onUpdate = (errors: readonly unknown[]) => {
     if (errors.length === 0) {
       productTranslations.refetch();
       notify({
@@ -121,19 +126,19 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
     });
   };
   const handleAttributeValueSubmit = (
-    { id, type }: TranslationField<TranslationInputFieldName>,
+    { id: attrValueId, type }: AttributeValueTranslationField,
     data: HandleSubmitAttributeValue,
   ) =>
     extractMutationErrors(
       updateAttributeValueTranslations({
         variables: {
-          id,
-          input: getAttributeValueTranslationsInputData(type, data),
+          id: attrValueId,
+          input: getAttributeValueTranslationsInputData(type ?? "", data),
           language: languageCode,
         },
       }),
     );
-  const translation = productTranslations?.data?.translation;
+  const translation = productTranslations.data?.translation;
 
   return (
     <TranslationsProductsPage
