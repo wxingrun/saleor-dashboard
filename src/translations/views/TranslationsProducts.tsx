@@ -1,6 +1,9 @@
-// @ts-strict-ignore
 import {
   type LanguageCodeEnum,
+  type ProductTranslationDetailsQuery,
+  type ProductTranslationFragment,
+  type UpdateAttributeValueTranslationsMutation,
+  type UpdateProductTranslationsMutation,
   useProductTranslationDetailsQuery,
   useUpdateAttributeValueTranslationsMutation,
   useUpdateProductTranslationsMutation,
@@ -18,6 +21,22 @@ import { type TranslationField, type TranslationInputFieldName } from "../types"
 import { getAttributeValueTranslationsInputData, getParsedTranslationInputData } from "../utils";
 
 type HandleSubmitAttributeValue = OutputData | string;
+type ProductTranslatableContent = Extract<
+  NonNullable<ProductTranslationDetailsQuery["translation"]>,
+  { __typename: "ProductTranslatableContent" }
+>;
+
+const emptyProductTranslation: ProductTranslationFragment = {
+  __typename: "ProductTranslatableContent",
+  attributeValues: [],
+  product: null,
+  translation: null,
+};
+
+const isProductTranslatableContent = (
+  translation: ProductTranslationDetailsQuery["translation"],
+): translation is ProductTranslatableContent =>
+  translation?.__typename === "ProductTranslatableContent";
 
 export interface TranslationsProductsQueryParams {
   activeField: string;
@@ -46,10 +65,12 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
     }
   };
   const [updateTranslations, updateTranslationsOpts] = useUpdateProductTranslationsMutation({
-    onCompleted: data => onUpdate(data.productTranslate.errors),
+    onCompleted: (data: UpdateProductTranslationsMutation) =>
+      onUpdate(data.productTranslate?.errors ?? []),
   });
   const [updateAttributeValueTranslations] = useUpdateAttributeValueTranslationsMutation({
-    onCompleted: data => onUpdate(data.attributeValueTranslate.errors),
+    onCompleted: (data: UpdateAttributeValueTranslationsMutation) =>
+      onUpdate(data.attributeValueTranslate?.errors ?? []),
   });
   const onEdit = (field: string | string[]) =>
     navigate(
@@ -83,7 +104,7 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
 
   const handleSubmit = (
     { name: fieldName }: TranslationField<TranslationInputFieldName>,
-    data: string,
+    data: string | OutputData,
   ) => {
     return extractMutationErrors(
       updateTranslations({
@@ -121,19 +142,27 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
     });
   };
   const handleAttributeValueSubmit = (
-    { id, type }: TranslationField<TranslationInputFieldName>,
+    { id: attributeValueId, type }: TranslationField<TranslationInputFieldName>,
     data: HandleSubmitAttributeValue,
-  ) =>
-    extractMutationErrors(
+  ) => {
+    if (!attributeValueId) {
+      return Promise.resolve([]);
+    }
+
+    return extractMutationErrors(
       updateAttributeValueTranslations({
         variables: {
-          id,
+          id: attributeValueId,
           input: getAttributeValueTranslationsInputData(type, data),
           language: languageCode,
         },
       }),
     );
-  const translation = productTranslations?.data?.translation;
+  };
+  const translation = productTranslations.data?.translation;
+  const productTranslation = isProductTranslatableContent(translation)
+    ? translation
+    : emptyProductTranslation;
 
   return (
     <TranslationsProductsPage
@@ -148,7 +177,7 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
       onDiscard={onDiscard}
       onSubmit={handleSubmit}
       onAttributeValueSubmit={handleAttributeValueSubmit}
-      data={translation?.__typename === "ProductTranslatableContent" ? translation : null}
+      data={productTranslation}
     />
   );
 };
