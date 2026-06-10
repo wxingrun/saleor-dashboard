@@ -1,0 +1,83 @@
+diff --git a/src/products/components/ProductListDatagrid/datagrid.ts b/src/products/components/ProductListDatagrid/datagrid.ts
+index 86093c30b..5d2cc8cb2 100644
+--- a/src/products/components/ProductListDatagrid/datagrid.ts
++++ b/src/products/components/ProductListDatagrid/datagrid.ts
+@@ -45,6 +45,8 @@ import { type IntlShape } from "react-intl";
+ import { getAttributeIdFromColumnValue } from "../ProductListPage/utils";
+ import { categoryMetaGroups, columnsMessages } from "./messages";
+ 
++import moment from "moment-timezone";
++
+ export const productListStaticColumnAdapter = ({
+   intl,
+   sort,
+@@ -80,6 +82,11 @@ export const productListStaticColumnAdapter = ({
+       title: intl.formatMessage(columnsMessages.updatedAt),
+       width: 300,
+     },
++    {
++      id: "lastModifiedAt",
++      title: "最后修改时间",
++      width: 300,
++    },
+     {
+       id: "created",
+       title: intl.formatMessage(columnsMessages.created),
+@@ -219,6 +226,8 @@ export function createGetCellContent({
+         return getPriceCellContent(intl, channel);
+       case "date":
+         return getDateCellContent(rowData);
++      case "lastModifiedAt":
++        return getLastModifiedAtCellContent(rowData);
+       case "created":
+         return getCreatedCellContent(rowData);
+       case "productCategory":
+@@ -243,6 +252,15 @@ function getDateCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[n
+   return dateCell(rowData?.updatedAt, COMMON_CELL_PROPS);
+ }
+ 
++const FormattedDate = (date: string) => moment(date).format("YYYY-MM-DD HH:mm");
++
++function getLastModifiedAtCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {
++  if (!rowData?.updatedAt) {
++    return readonlyTextCell("-");
++  }
++  return readonlyTextCell(FormattedDate(rowData.updatedAt));
++}
++
+ function getCreatedCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {
+   return dateCell(rowData?.created, COMMON_CELL_PROPS);
+ }
+diff --git a/src/products/urls.ts b/src/products/urls.ts
+index e3e4f4e6d..363c94898 100644
+--- a/src/products/urls.ts
++++ b/src/products/urls.ts
+@@ -75,6 +75,7 @@ export enum ProductListUrlSortField {
+   rank = "rank",
+   date = "date",
+   created = "created",
++  LAST_MODIFIED_AT = "lastModifiedAt",
+ }
+ type ProductListUrlSort = Sort<ProductListUrlSortField>;
+ export interface ProductListUrlQueryParams
+diff --git a/src/products/views/ProductList/sort.ts b/src/products/views/ProductList/sort.ts
+index db2fcaa0d..0f287e71a 100644
+--- a/src/products/views/ProductList/sort.ts
++++ b/src/products/views/ProductList/sort.ts
+@@ -11,6 +11,7 @@ export function canBeSorted(sort: ProductListUrlSortField, isChannelSelected: bo
+     case ProductListUrlSortField.productType:
+     case ProductListUrlSortField.date:
+     case ProductListUrlSortField.created:
++    case ProductListUrlSortField.LAST_MODIFIED_AT:
+     case ProductListUrlSortField.attribute:
+     case ProductListUrlSortField.rank:
+       return true;
+@@ -38,6 +39,8 @@ function getSortQueryField(sort: ProductListUrlSortField): ProductOrderField {
+       return ProductOrderField.DATE;
+     case ProductListUrlSortField.created:
+       return ProductOrderField.CREATED_AT;
++    case ProductListUrlSortField.LAST_MODIFIED_AT:
++      return ProductOrderField.LAST_MODIFIED_AT;
+     default:
+       return undefined;
+   }

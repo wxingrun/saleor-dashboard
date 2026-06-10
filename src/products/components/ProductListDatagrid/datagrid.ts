@@ -45,6 +45,8 @@ import { type IntlShape } from "react-intl";
 import { getAttributeIdFromColumnValue } from "../ProductListPage/utils";
 import { categoryMetaGroups, columnsMessages } from "./messages";
 
+import moment from "moment-timezone";
+
 export const productListStaticColumnAdapter = ({
   intl,
   sort,
@@ -78,6 +80,11 @@ export const productListStaticColumnAdapter = ({
     {
       id: "date",
       title: intl.formatMessage(columnsMessages.updatedAt),
+      width: 300,
+    },
+    {
+      id: "lastModifiedAt",
+      title: "最后修改时间",
       width: 300,
     },
     {
@@ -219,6 +226,8 @@ export function createGetCellContent({
         return getPriceCellContent(intl, channel);
       case "date":
         return getDateCellContent(rowData);
+      case "lastModifiedAt":
+        return getLastModifiedAtCellContent(rowData);
       case "created":
         return getCreatedCellContent(rowData);
       case "productCategory":
@@ -241,6 +250,15 @@ const COMMON_CELL_PROPS: Partial<GridCell> = { cursor: "pointer" };
 
 function getDateCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {
   return dateCell(rowData?.updatedAt, COMMON_CELL_PROPS);
+}
+
+const FormattedDate = (date: string) => moment(date).format("YYYY-MM-DD HH:mm");
+
+function getLastModifiedAtCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {
+  if (!rowData?.updatedAt) {
+    return readonlyTextCell("-");
+  }
+  return readonlyTextCell(FormattedDate(rowData.updatedAt));
 }
 
 function getCreatedCellContent(rowData: RelayToFlat<ProductListQuery["products"]>[number]) {
