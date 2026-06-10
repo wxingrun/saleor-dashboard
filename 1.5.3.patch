@@ -1,0 +1,43 @@
+diff --git a/Dockerfile b/Dockerfile
+index 29279ed28..569803fd7 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -12,13 +12,25 @@ COPY locale/ locale/
+ COPY scripts/ scripts/
+ COPY vite.config.js ./
+ COPY tsconfig.json ./
+-COPY codegen-main.ts ./
+ COPY graphql.config.ts ./
+ COPY *.d.ts ./
+-COPY schema-main.graphql ./
+ COPY .featureFlags/ .featureFlags/
+ 
+-COPY src/ src/
++FROM builder AS codegen-prep
++COPY src/ /tmp/src_full/
++RUN mkdir -p /codegen_out && \
++    cp -r /tmp/src_full/fragments /codegen_out/fragments && \
++    cp -r /tmp/src_full/searches /codegen_out/searches && \
++    cp -r /tmp/src_full/graphql /codegen_out/graphql && \
++    find /tmp/src_full -type f \( -name 'queries.ts' -o -name 'mutations.ts' \) | while read f; do \
++      rel="$${f#/tmp/src_full/}"; \
++      mkdir -p "/codegen_out/$$(dirname "$$rel")" && \
++      cp "$$f" "/codegen_out/$$rel"; \
++    done
++
++FROM builder
++COPY codegen-main.ts schema-main.graphql ./
++COPY --from=codegen-prep /codegen_out/ src/
+ 
+ ARG API_URL
+ ARG APP_MOUNT_URI
+@@ -34,6 +46,9 @@ ENV STATIC_URL="${STATIC_URL:-/dashboard/}"
+ ENV SKIP_SOURCEMAPS="${SKIP_SOURCEMAPS:-true}"
+ ENV LOCALE_CODE="${LOCALE_CODE:-EN}"
+ RUN pnpm run generate:main
++
++COPY src/ src/
++
+ RUN pnpm exec cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build
+ 
+ FROM nginx:stable-alpine AS runner
