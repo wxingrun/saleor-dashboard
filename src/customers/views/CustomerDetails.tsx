@@ -15,6 +15,8 @@ import { CustomerMetadataDialog } from "../components/CustomerMetadataDialog/Cus
 import { useCustomerDetails } from "../hooks/useCustomerDetails";
 import { CustomerDetailsProvider } from "../providers/CustomerDetailsProvider";
 import { customerListUrl, customerUrl, type CustomerUrlQueryParams } from "../urls";
+import { useRecentlyVisited } from "@dashboard/hooks/useRecentlyVisited";
+import { useEffect } from "react";
 
 interface CustomerDetailsViewProps {
   id: string;
@@ -29,6 +31,20 @@ const CustomerDetailsViewInner = ({ id, params }: CustomerDetailsViewProps) => {
   const customerDetails = useCustomerDetails();
   const user = customerDetails?.customer?.user;
   const customerDetailsLoading = customerDetails?.loading;
+
+  const { addVisitedItem } = useRecentlyVisited();
+
+  useEffect(() => {
+    if (user) {
+      const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+      addVisitedItem({
+        type: "customer",
+        id,
+        name,
+        url: customerUrl(id),
+      });
+    }
+  }, [user, id, addVisitedItem]);
 
   const [removeCustomer, removeCustomerOpts] = useRemoveCustomerMutation({
     onCompleted: data => {

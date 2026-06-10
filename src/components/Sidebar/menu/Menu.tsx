@@ -3,6 +3,7 @@ import { Box, List } from "@saleor/macaw-ui-next";
 import { Shortcusts } from "../shortcuts";
 import { useMenuStructure } from "./hooks/useMenuStructure";
 import { MenuItem } from "./Item";
+import { RecentlyVisited } from "./RecentlyVisited";
 
 export const Menu = () => {
   const menuStructure = useMenuStructure();
@@ -16,11 +17,14 @@ export const Menu = () => {
       flexDirection="column"
       justifyContent="space-between"
     >
-      <List as="ol" display="grid" gap={1} data-test-id="menu-list">
-        {menuStructure.map(menuItem => (
-          <MenuItem menuItem={menuItem} key={menuItem.id} />
-        ))}
-      </List>
+      <Box>
+        <RecentlyVisited />
+        <List as="ol" display="grid" gap={1} data-test-id="menu-list">
+          {menuStructure.map(menuItem => (
+            <MenuItem menuItem={menuItem} key={menuItem.id} />
+          ))}
+        </List>
+      </Box>
 
       <Shortcusts />
     </Box>

@@ -29,6 +29,8 @@ import { OrderDraftDetails } from "./OrderDraftDetails";
 import { OrderNormalDetails } from "./OrderNormalDetails";
 import { OrderUnconfirmedDetails } from "./OrderUnconfirmedDetails";
 import { useOrderDetails } from "./useOrderDetails";
+import { useRecentlyVisited } from "@dashboard/hooks/useRecentlyVisited";
+import { useEffect } from "react";
 
 interface OrderDetailsProps {
   id: string;
@@ -52,6 +54,20 @@ const OrderDetails = ({ id, params }: OrderDetailsProps) => {
   const handleBack = () => navigate(orderListUrl());
   const { data, loading } = useOrderDetails(id);
   const order = data?.order;
+
+  const { addVisitedItem } = useRecentlyVisited();
+
+  useEffect(() => {
+    if (order?.number) {
+      addVisitedItem({
+        type: "order",
+        id,
+        name: `#${order.number}`,
+        url: orderUrl(id),
+      });
+    }
+  }, [order?.number, id, addVisitedItem]);
+
   const [orderConfirm, orderConfirmOpts] = useOrderConfirmMutation({
     onCompleted: data => {
       const errors = data.orderConfirm?.errors ?? [];

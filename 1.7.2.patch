@@ -1,0 +1,133 @@
+diff --git a/src/components/Sidebar/menu/Menu.tsx b/src/components/Sidebar/menu/Menu.tsx
+index 8f79afccc..75c376993 100644
+--- a/src/components/Sidebar/menu/Menu.tsx
++++ b/src/components/Sidebar/menu/Menu.tsx
+@@ -3,6 +3,7 @@ import { Box, List } from "@saleor/macaw-ui-next";
+ import { Shortcusts } from "../shortcuts";
+ import { useMenuStructure } from "./hooks/useMenuStructure";
+ import { MenuItem } from "./Item";
++import { RecentlyVisited } from "./RecentlyVisited";
+ 
+ export const Menu = () => {
+   const menuStructure = useMenuStructure();
+@@ -16,11 +17,14 @@ export const Menu = () => {
+       flexDirection="column"
+       justifyContent="space-between"
+     >
+-      <List as="ol" display="grid" gap={1} data-test-id="menu-list">
+-        {menuStructure.map(menuItem => (
+-          <MenuItem menuItem={menuItem} key={menuItem.id} />
+-        ))}
+-      </List>
++      <Box>
++        <RecentlyVisited />
++        <List as="ol" display="grid" gap={1} data-test-id="menu-list">
++          {menuStructure.map(menuItem => (
++            <MenuItem menuItem={menuItem} key={menuItem.id} />
++          ))}
++        </List>
++      </Box>
+ 
+       <Shortcusts />
+     </Box>
+diff --git a/src/customers/views/CustomerDetails.tsx b/src/customers/views/CustomerDetails.tsx
+index 110bbd0cd..c0f843a05 100644
+--- a/src/customers/views/CustomerDetails.tsx
++++ b/src/customers/views/CustomerDetails.tsx
+@@ -15,6 +15,8 @@ import { CustomerMetadataDialog } from "../components/CustomerMetadataDialog/Cus
+ import { useCustomerDetails } from "../hooks/useCustomerDetails";
+ import { CustomerDetailsProvider } from "../providers/CustomerDetailsProvider";
+ import { customerListUrl, customerUrl, type CustomerUrlQueryParams } from "../urls";
++import { useRecentlyVisited } from "@dashboard/hooks/useRecentlyVisited";
++import { useEffect } from "react";
+ 
+ interface CustomerDetailsViewProps {
+   id: string;
+@@ -30,6 +32,20 @@ const CustomerDetailsViewInner = ({ id, params }: CustomerDetailsViewProps) => {
+   const user = customerDetails?.customer?.user;
+   const customerDetailsLoading = customerDetails?.loading;
+ 
++  const { addVisitedItem } = useRecentlyVisited();
++
++  useEffect(() => {
++    if (user) {
++      const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
++      addVisitedItem({
++        type: "customer",
++        id,
++        name,
++        url: customerUrl(id),
++      });
++    }
++  }, [user, id, addVisitedItem]);
++
+   const [removeCustomer, removeCustomerOpts] = useRemoveCustomerMutation({
+     onCompleted: data => {
+       if (data.customerDelete.errors.length === 0) {
+diff --git a/src/orders/views/OrderDetails/OrderDetails.tsx b/src/orders/views/OrderDetails/OrderDetails.tsx
+index 32af53763..90ae12d6a 100644
+--- a/src/orders/views/OrderDetails/OrderDetails.tsx
++++ b/src/orders/views/OrderDetails/OrderDetails.tsx
+@@ -29,6 +29,8 @@ import { OrderDraftDetails } from "./OrderDraftDetails";
+ import { OrderNormalDetails } from "./OrderNormalDetails";
+ import { OrderUnconfirmedDetails } from "./OrderUnconfirmedDetails";
+ import { useOrderDetails } from "./useOrderDetails";
++import { useRecentlyVisited } from "@dashboard/hooks/useRecentlyVisited";
++import { useEffect } from "react";
+ 
+ interface OrderDetailsProps {
+   id: string;
+@@ -52,6 +54,20 @@ const OrderDetails = ({ id, params }: OrderDetailsProps) => {
+   const handleBack = () => navigate(orderListUrl());
+   const { data, loading } = useOrderDetails(id);
+   const order = data?.order;
++
++  const { addVisitedItem } = useRecentlyVisited();
++
++  useEffect(() => {
++    if (order?.number) {
++      addVisitedItem({
++        type: "order",
++        id,
++        name: `#${order.number}`,
++        url: orderUrl(id),
++      });
++    }
++  }, [order?.number, id, addVisitedItem]);
++
+   const [orderConfirm, orderConfirmOpts] = useOrderConfirmMutation({
+     onCompleted: data => {
+       const errors = data.orderConfirm?.errors ?? [];
+diff --git a/src/products/views/ProductUpdate/ProductUpdate.tsx b/src/products/views/ProductUpdate/ProductUpdate.tsx
+index 096650c8e..835b8e832 100644
+--- a/src/products/views/ProductUpdate/ProductUpdate.tsx
++++ b/src/products/views/ProductUpdate/ProductUpdate.tsx
+@@ -54,6 +54,7 @@ import {
+ import { createImageReorderHandler, createImageUploadHandler } from "./handlers";
+ import { useProductUpdateHandler } from "./handlers/useProductUpdateHandler";
+ import { productUpdatePageMessages as messages } from "./messages";
++import { useRecentlyVisited } from "@dashboard/hooks/useRecentlyVisited";
+ 
+ interface ProductUpdateProps {
+   id: string;
+@@ -102,6 +103,20 @@ const ProductUpdate = ({ id, params }: ProductUpdateProps) => {
+       firstValues: VALUES_PAGINATE_BY,
+     },
+   });
++
++  const { addVisitedItem } = useRecentlyVisited();
++
++  useEffect(() => {
++    if (data?.product?.name) {
++      addVisitedItem({
++        type: "product",
++        id,
++        name: data.product.name,
++        url: productUrl(id),
++      });
++    }
++  }, [data?.product?.name, id, addVisitedItem]);
++
+   const isSimpleProduct = !data?.product?.productType?.hasVariants;
+   const { availableChannels } = useAppChannel(false);
+   const limitOpts = useShopLimitsQuery({

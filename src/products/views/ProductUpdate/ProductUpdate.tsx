@@ -54,6 +54,7 @@ import {
 import { createImageReorderHandler, createImageUploadHandler } from "./handlers";
 import { useProductUpdateHandler } from "./handlers/useProductUpdateHandler";
 import { productUpdatePageMessages as messages } from "./messages";
+import { useRecentlyVisited } from "@dashboard/hooks/useRecentlyVisited";
 
 interface ProductUpdateProps {
   id: string;
@@ -102,6 +103,20 @@ const ProductUpdate = ({ id, params }: ProductUpdateProps) => {
       firstValues: VALUES_PAGINATE_BY,
     },
   });
+
+  const { addVisitedItem } = useRecentlyVisited();
+
+  useEffect(() => {
+    if (data?.product?.name) {
+      addVisitedItem({
+        type: "product",
+        id,
+        name: data.product.name,
+        url: productUrl(id),
+      });
+    }
+  }, [data?.product?.name, id, addVisitedItem]);
+
   const isSimpleProduct = !data?.product?.productType?.hasVariants;
   const { availableChannels } = useAppChannel(false);
   const limitOpts = useShopLimitsQuery({
