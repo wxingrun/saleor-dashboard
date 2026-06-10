@@ -6,8 +6,10 @@ import { ThemeProvider } from "@saleor/macaw-ui-next";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode } from "react";
+import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 
+import { RECENTLY_VISITED_STORAGE_KEY } from "./recentlyVisited";
 import { Sidebar } from "./Sidebar";
 import { SidebarProvider } from "./SidebarContext";
 
@@ -54,44 +56,90 @@ jest.mock("@dashboard/ripples/state", () => ({
 const Wrapper = ({ children }: { children: ReactNode }) => {
   return (
     <MemoryRouter>
-      {/* @ts-expect-error - legacy types */}
-      <LegacyThemeProvider>
-        <ThemeProvider>
-          <SidebarProvider>{children}</SidebarProvider>
-        </ThemeProvider>
-      </LegacyThemeProvider>
+      <IntlProvider locale="en">
+        {/* @ts-expect-error - legacy types */}
+        <LegacyThemeProvider>
+          <ThemeProvider>
+            <SidebarProvider>{children}</SidebarProvider>
+          </ThemeProvider>
+        </LegacyThemeProvider>
+      </IntlProvider>
     </MemoryRouter>
   );
 };
 
 describe("Sidebar", () => {
+  beforeEach(() => {
+    // Arrange
+    localStorage.clear();
+  });
+
   it("should render cloud environment link when is cloud instance", () => {
     // Arrange
     (useCloud as jest.Mock).mockImplementation(() => ({
       isAuthenticatedViaCloud: true,
     }));
+
     // Act
     render(<Sidebar />, { wrapper: Wrapper });
+
     // Assert
     expect(screen.getByTestId("cloud-environment-link")).toBeInTheDocument();
   });
+
   it("should not render cloud environment link when is not cloud instance", () => {
     // Arrange
     (useCloud as jest.Mock).mockImplementation(() => ({
       isAuthenticatedViaCloud: false,
     }));
+
     // Act
     render(<Sidebar />, { wrapper: Wrapper });
+
     // Assert
     expect(screen.queryByTestId("cloud-environment-link")).not.toBeInTheDocument();
   });
+
   it("should render keyboard shortcuts", () => {
     // Arrange & Act
     render(<Sidebar />, { wrapper: Wrapper });
+
     // Assert
     expect(screen.getByText("Command menu")).toBeInTheDocument();
     expect(screen.getByText("Playground")).toBeInTheDocument();
   });
+
+  it("should render recently visited section when records exist", () => {
+    // Arrange
+    localStorage.setItem(
+      RECENTLY_VISITED_STORAGE_KEY,
+      JSON.stringify([
+        {
+          entityType: "product",
+          id: "product-1",
+          label: "Bean Juice",
+          url: "/products/product-1?",
+        },
+      ]),
+    );
+
+    // Act
+    render(<Sidebar />, { wrapper: Wrapper });
+
+    // Assert
+    expect(screen.getByTestId("recently-visited-section")).toBeInTheDocument();
+    expect(screen.getByText("Recently visited")).toBeInTheDocument();
+    expect(screen.getByText("Bean Juice")).toBeInTheDocument();
+  });
+
+  it("should hide recently visited section when there are no records", () => {
+    // Arrange & Act
+    render(<Sidebar />, { wrapper: Wrapper });
+
+    // Assert
+    expect(screen.queryByTestId("recently-visited-section")).not.toBeInTheDocument();
+  });
+
   it("should call callback when click on playground shortcut", async () => {
     // Arrange
     const actionCallback = jest.fn();
@@ -105,11 +153,14 @@ describe("Sidebar", () => {
       setDevModeContent: jest.fn(),
     }));
     render(<Sidebar />, { wrapper: Wrapper });
+
     // Act
     await userEvent.click(screen.getByText("Playground"));
+
     // Assert
     expect(actionCallback).toHaveBeenCalledWith(true);
   });
+
   it("should call callback when click on search shortcut", async () => {
     // Arrange
     const actionCallback = jest.fn();
@@ -119,8 +170,10 @@ describe("Sidebar", () => {
       setNavigatorVisibility: actionCallback,
     }));
     render(<Sidebar />, { wrapper: Wrapper });
+
     // Act
     await userEvent.click(screen.getByText("Command menu"));
+
     // Assert
     expect(actionCallback).toHaveBeenCalledWith(true);
   });

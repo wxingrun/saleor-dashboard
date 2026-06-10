@@ -1,6 +1,7 @@
 // @ts-strict-ignore
 import { type FetchResult } from "@apollo/client";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
+import { useTrackRecentlyVisitedEntry } from "@dashboard/components/Sidebar/recentlyVisited";
 import { CardSpacer } from "@dashboard/components/CardSpacer";
 import { type ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
 import { useDevModeContext } from "@dashboard/components/DevModePanel/hooks";
@@ -26,7 +27,7 @@ import useNavigator from "@dashboard/hooks/useNavigator";
 import { defaultGraphiQLQuery } from "@dashboard/orders/queries";
 import { rippleOrderMetadata } from "@dashboard/orders/ripples/orderMetadata";
 import { orderShouldUseTransactions } from "@dashboard/orders/types";
-import { orderListUrl } from "@dashboard/orders/urls";
+import { orderListUrl, orderUrl } from "@dashboard/orders/urls";
 import { OrderDiscountContext } from "@dashboard/products/components/OrderDiscountProviders/OrderDiscountProvider";
 import { Divider } from "@saleor/macaw-ui-next";
 import { useContext, useState } from "react";
@@ -146,6 +147,18 @@ const OrderDetailsPage = (props: OrderDetailsPageProps) => {
   const notAllowedToFulfillUnpaid =
     shop?.fulfillmentAutoApprove && !shop?.fulfillmentAllowUnpaid && !order?.isPaid;
   const unfulfilled = (order?.lines || []).filter(line => line.quantityToFulfill > 0);
+
+  useTrackRecentlyVisitedEntry(
+    order
+      ? {
+          entityType: "order",
+          id: order.id,
+          label: `#${order.number}`,
+          url: orderUrl(order.id),
+        }
+      : null,
+  );
+
   const handleSubmit = async (data: MetadataIdSchema) => {
     if (!onSubmit) {
       return [];

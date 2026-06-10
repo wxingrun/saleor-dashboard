@@ -1,5 +1,6 @@
 // @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
+import { useTrackRecentlyVisitedEntry } from "@dashboard/components/Sidebar/recentlyVisited";
 import { Backlink } from "@dashboard/components/Backlink";
 import { CardSpacer } from "@dashboard/components/CardSpacer";
 import { type ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
@@ -9,7 +10,7 @@ import { Pill } from "@dashboard/components/Pill";
 import RequirePermissions from "@dashboard/components/RequirePermissions";
 import { Savebar } from "@dashboard/components/Savebar";
 import { useCanEditCustomers } from "@dashboard/customers/hooks/useCanEditCustomers";
-import { customerAddressesUrl, customerListPath } from "@dashboard/customers/urls";
+import { customerAddressesUrl, customerListPath, customerUrl } from "@dashboard/customers/urls";
 import { AppWidgets } from "@dashboard/extensions/components/AppWidgets/AppWidgets";
 import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
 import { getExtensionsItemsForCustomerDetails } from "@dashboard/extensions/getExtensionsItems";
@@ -141,6 +142,17 @@ const CustomerDetailsPage = ({
   const menuItems = [...builtInMenuItems, ...extensionMenuItems];
 
   const customerName = getUserName(customer, true);
+
+  useTrackRecentlyVisitedEntry(
+    customer
+      ? {
+          entityType: "customer",
+          id: customer.id,
+          label: customerName || customer.email || customer.id,
+          url: customerUrl(customer.id),
+        }
+      : null,
+  );
   // Mirrors OrderDetailsPage's title layout: name (+ optional Staff pill) on
   // the left, "Member since" date as a lower-emphasis sibling on the right,
   // both on the same line. Keeps the page's TopNav consistent with Orders.

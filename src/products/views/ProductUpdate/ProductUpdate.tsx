@@ -7,6 +7,7 @@ import { type InitialConstraints } from "@dashboard/components/ModalFilters/enti
 import NotFoundPage from "@dashboard/components/NotFoundPage";
 import { useShopLimitsQuery } from "@dashboard/components/Shop/queries";
 import { WindowTitle } from "@dashboard/components/WindowTitle";
+import { useTrackRecentlyVisitedEntry } from "@dashboard/components/Sidebar/recentlyVisited";
 import { DEFAULT_INITIAL_SEARCH_DATA, VALUES_PAGINATE_BY } from "@dashboard/config";
 import {
   ErrorPolicyEnum,
@@ -231,6 +232,18 @@ const ProductUpdate = ({ id, params }: ProductUpdateProps) => {
     },
   });
   const product = data?.product;
+
+  useTrackRecentlyVisitedEntry(
+    product
+      ? {
+          entityType: "product",
+          id: product.id,
+          label: product.name,
+          url: productUrl(product.id),
+        }
+      : null,
+  );
+
   const [deleteMediaType, setDeleteMediaType] = useState<ProductMediaType | null>(null);
 
   useEffect(() => {
