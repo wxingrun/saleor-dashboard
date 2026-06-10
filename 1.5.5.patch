@@ -1,3 +1,105 @@
+diff --git a/1.5.5.patch b/1.5.5.patch
+new file mode 100644
+index 000000000..d679aa7a4
+--- /dev/null
++++ b/1.5.5.patch
+@@ -0,0 +1,96 @@
++diff --git a/Dockerfile b/Dockerfile
++index 29279ed28..8657ea738 100644
++--- a/Dockerfile
+++++ b/Dockerfile
++@@ -18,6 +18,83 @@ COPY *.d.ts ./
++ COPY schema-main.graphql ./
++ COPY .featureFlags/ .featureFlags/
++ 
+++# Copy only GraphQL-related files first for better layer caching
+++# This ensures codegen step is cached when non-GraphQL files change
+++COPY src/fragments/ src/fragments/
+++COPY src/searches/ src/searches/
+++COPY src/products/queries.ts src/products/queries.ts
+++COPY src/products/mutations.ts src/products/mutations.ts
+++COPY src/welcomePage/queries.ts src/welcomePage/queries.ts
+++COPY src/welcomePage/mutations.ts src/welcomePage/mutations.ts
+++COPY src/warehouses/queries.ts src/warehouses/queries.ts
+++COPY src/warehouses/mutations.ts src/warehouses/mutations.ts
+++COPY src/translations/queries.ts src/translations/queries.ts
+++COPY src/translations/mutations.ts src/translations/mutations.ts
+++COPY src/taxes/queries.ts src/taxes/queries.ts
+++COPY src/taxes/mutations.ts src/taxes/mutations.ts
+++COPY src/structures/queries.ts src/structures/queries.ts
+++COPY src/structures/mutations.ts src/structures/mutations.ts
+++COPY src/staff/queries.ts src/staff/queries.ts
+++COPY src/staff/mutations.ts src/staff/mutations.ts
+++COPY src/siteSettings/queries.ts src/siteSettings/queries.ts
+++COPY src/siteSettings/mutations.ts src/siteSettings/mutations.ts
+++COPY src/shipping/queries.ts src/shipping/queries.ts
+++COPY src/shipping/mutations.ts src/shipping/mutations.ts
+++COPY src/search/queries.ts src/search/queries.ts
+++COPY src/refundsSettings/queries.ts src/refundsSettings/queries.ts
+++COPY src/refundsSettings/mutations.ts src/refundsSettings/mutations.ts
+++COPY src/productTypes/queries.ts src/productTypes/queries.ts
+++COPY src/productTypes/mutations.ts src/productTypes/mutations.ts
+++COPY src/permissionGroups/queries.ts src/permissionGroups/queries.ts
+++COPY src/permissionGroups/mutations.ts src/permissionGroups/mutations.ts
+++COPY src/orders/queries.ts src/orders/queries.ts
+++COPY src/orders/mutations.ts src/orders/mutations.ts
+++COPY src/modeling/queries.ts src/modeling/queries.ts
+++COPY src/modeling/mutations.ts src/modeling/mutations.ts
+++COPY src/modelTypes/queries.ts src/modelTypes/queries.ts
+++COPY src/modelTypes/mutations.ts src/modelTypes/mutations.ts
+++COPY src/legacy-sdk/ src/legacy-sdk/
+++COPY src/giftCards/components/GiftCardCustomerCard/queries.ts src/giftCards/components/GiftCardCustomerCard/queries.ts
+++COPY src/giftCards/GiftCardsList/queries.ts src/giftCards/GiftCardsList/queries.ts
+++COPY src/giftCards/GiftCardsList/mutations.ts src/giftCards/GiftCardsList/mutations.ts
+++COPY src/giftCards/GiftCardUpdate/queries.ts src/giftCards/GiftCardUpdate/queries.ts
+++COPY src/giftCards/GiftCardUpdate/mutations.ts src/giftCards/GiftCardUpdate/mutations.ts
+++COPY src/giftCards/GiftCardUpdate/GiftCardUpdatePageHeader/mutations.ts src/giftCards/GiftCardUpdate/GiftCardUpdatePageHeader/mutations.ts
+++COPY src/giftCards/GiftCardUpdate/GiftCardResendCodeDialog/mutations.ts src/giftCards/GiftCardUpdate/GiftCardResendCodeDialog/mutations.ts
+++COPY src/giftCards/GiftCardSettings/queries.ts src/giftCards/GiftCardSettings/queries.ts
+++COPY src/giftCards/GiftCardSettings/mutations.ts src/giftCards/GiftCardSettings/mutations.ts
+++COPY src/giftCards/GiftCardExportDialogContent/mutations.ts src/giftCards/GiftCardExportDialogContent/mutations.ts
+++COPY src/giftCards/GiftCardCreateDialog/queries.ts src/giftCards/GiftCardCreateDialog/queries.ts
+++COPY src/giftCards/GiftCardCreateDialog/mutations.ts src/giftCards/GiftCardCreateDialog/mutations.ts
+++COPY src/giftCards/GiftCardBulkCreateDialog/mutations.ts src/giftCards/GiftCardBulkCreateDialog/mutations.ts
+++COPY src/files/mutations.ts src/files/mutations.ts
+++COPY src/extensions/queries.ts src/extensions/queries.ts
+++COPY src/extensions/mutations.ts src/extensions/mutations.ts
+++COPY src/extensions/components/AppAlerts/queries.ts src/extensions/components/AppAlerts/queries.ts
+++COPY src/discounts/queries.ts src/discounts/queries.ts
+++COPY src/discounts/mutations.ts src/discounts/mutations.ts
+++COPY src/customers/queries.ts src/customers/queries.ts
+++COPY src/customers/mutations.ts src/customers/mutations.ts
+++COPY src/containers/BackgroundTasks/queries.ts src/containers/BackgroundTasks/queries.ts
+++COPY src/components/Shop/queries.ts src/components/Shop/queries.ts
+++COPY src/components/NavigatorSearch/queries.ts src/components/NavigatorSearch/queries.ts
+++COPY src/components/DryRunItemsList/queries.ts src/components/DryRunItemsList/queries.ts
+++COPY src/components/DryRun/mutations.ts src/components/DryRun/mutations.ts
+++COPY src/components/ConditionalFilter/API/queries.ts src/components/ConditionalFilter/API/queries.ts
+++COPY src/components/AddressEdit/queries.ts src/components/AddressEdit/queries.ts
+++COPY src/collections/queries.ts src/collections/queries.ts
+++COPY src/collections/mutations.ts src/collections/mutations.ts
+++COPY src/channels/queries.ts src/channels/queries.ts
+++COPY src/channels/mutations.ts src/channels/mutations.ts
+++COPY src/categories/queries.ts src/categories/queries.ts
+++COPY src/categories/mutations.ts src/categories/mutations.ts
+++COPY src/auth/queries.ts src/auth/queries.ts
+++COPY src/auth/mutations.ts src/auth/mutations.ts
+++COPY src/utils/metadata/mutations.ts src/utils/metadata/mutations.ts
+++
+++RUN pnpm run generate:main
+++
+++# Copy remaining source files (this layer changes more frequently)
++ COPY src/ src/
++ 
++ ARG API_URL
++@@ -33,7 +110,6 @@ ENV EXTENSIONS_API_URL="${EXTENSIONS_API_URL}"
++ ENV STATIC_URL="${STATIC_URL:-/dashboard/}"
++ ENV SKIP_SOURCEMAPS="${SKIP_SOURCEMAPS:-true}"
++ ENV LOCALE_CODE="${LOCALE_CODE:-EN}"
++-RUN pnpm run generate:main
++ RUN pnpm exec cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build
++ 
++ FROM nginx:stable-alpine AS runner
 diff --git a/Dockerfile b/Dockerfile
 index 29279ed28..8657ea738 100644
 --- a/Dockerfile
@@ -94,3 +196,36 @@ index 29279ed28..8657ea738 100644
  RUN pnpm exec cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build
  
  FROM nginx:stable-alpine AS runner
+diff --git a/scripts/copy-graphql-files.sh b/scripts/copy-graphql-files.sh
+new file mode 100644
+index 000000000..bd84d1dce
+--- /dev/null
++++ b/scripts/copy-graphql-files.sh
+@@ -0,0 +1,27 @@
++#!/usr/bin/env bash
++# Copies only GraphQL-related files needed for codegen into a temporary directory.
++# This allows Docker to cache the codegen layer separately from other source changes.
++
++set -e
++
++SRC_DIR="${1:-.}"
++DEST_DIR="${2:-./graphql-tmp}"
++
++# Clean destination
++rm -rf "$DEST_DIR"
++mkdir -p "$DEST_DIR/src"
++
++# Find and copy all GraphQL documents that codegen reads
++find "$SRC_DIR/src" -type f \( \
++  -name "queries.ts" \
++  -o -name "mutations.ts" \
++  -o -path "*/fragments/*.ts" \
++  -path "*/searches/*.ts" \
++\) | while read -r file; do
++  rel_path="${file#$SRC_DIR/}"
++  dest_file="$DEST_DIR/$rel_path"
++  mkdir -p "$(dirname "$dest_file")"
++  cp "$file" "$dest_file"
++done
++
++echo "Copied GraphQL files to $DEST_DIR"
