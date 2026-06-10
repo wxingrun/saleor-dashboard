@@ -120,4 +120,112 @@ describe("validateChannelFormData", () => {
       ]),
     );
   });
+
+  it("should return error when slug contains uppercase letters, spaces or special characters !@#$", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      slug: "Test-Channel!@#$",
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert - 场景1：slug包含非法字符，断言校验失败（抛出错误）
+    expect(errors).not.toEqual([]);
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        code: ChannelErrorCode.INVALID,
+        field: "slug",
+      }),
+    );
+  });
+
+  it("should return no errors when currencyCode is empty string", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      currencyCode: "",
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert - 场景2：currency字段为空字符串，断言校验通过（无错误）
+    expect(errors).toEqual([]);
+  });
+
+  it("should return error when defaultCountry is invalid ISO 3166-1 alpha-2 code", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      defaultCountry: "XX" as CountryCode,
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert - 场景3：defaultCountry为无效ISO代码，断言校验失败（抛出错误）
+    expect(errors).not.toEqual([]);
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        code: ChannelErrorCode.INVALID,
+        field: "defaultCountry",
+      }),
+    );
+  });
+
+  it("should return error when defaultCountry is valid ISO 3166-1 alpha-2 code", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      defaultCountry: "CN" as CountryCode,
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert - 场景4：defaultCountry为有效ISO代码，断言校验失败（抛出错误）
+    expect(errors).not.toEqual([]);
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        code: ChannelErrorCode.INVALID,
+        field: "defaultCountry",
+      }),
+    );
+  });
+
+  it("should return no errors when slug is empty string", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      slug: "",
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert - 场景5：slug字段为空字符串，断言校验通过（无错误）
+    expect(errors).toEqual([]);
+  });
+
+  it("should return error when slug length exceeds 50 characters", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      slug: "this-is-a-very-long-slug-that-exceeds-fifty-characters-in-length",
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert - 场景6：slug长度超过50字符，断言校验失败（抛出错误）
+    expect(errors).not.toEqual([]);
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        code: ChannelErrorCode.INVALID,
+        field: "slug",
+      }),
+    );
+  });
 });
