@@ -53,6 +53,7 @@ import {
 } from "../../urls";
 import { createImageReorderHandler, createImageUploadHandler } from "./handlers";
 import { useProductUpdateHandler } from "./handlers/useProductUpdateHandler";
+import { addRecentlyVisitedItem } from "@dashboard/components/Sidebar/recentlyVisited/utils";
 import { productUpdatePageMessages as messages } from "./messages";
 
 interface ProductUpdateProps {
@@ -231,6 +232,18 @@ const ProductUpdate = ({ id, params }: ProductUpdateProps) => {
     },
   });
   const product = data?.product;
+
+  useEffect(() => {
+    if (product) {
+      addRecentlyVisitedItem({
+        id,
+        type: "product",
+        name: product.name,
+        url: productUrl(id),
+      });
+    }
+  }, [id, product?.name]);
+
   const [deleteMediaType, setDeleteMediaType] = useState<ProductMediaType | null>(null);
 
   useEffect(() => {

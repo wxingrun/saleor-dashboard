@@ -18,6 +18,8 @@ import { useNotifier } from "@dashboard/hooks/useNotifier";
 import { getMutationState } from "@dashboard/misc";
 import getOrderErrorMessage from "@dashboard/utils/errors/order";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
+import { addRecentlyVisitedItem } from "@dashboard/components/Sidebar/recentlyVisited/utils";
+import { useEffect } from "react";
 import { useIntl } from "react-intl";
 
 import OrderOperations from "../../containers/OrderOperations";
@@ -52,6 +54,18 @@ const OrderDetails = ({ id, params }: OrderDetailsProps) => {
   const handleBack = () => navigate(orderListUrl());
   const { data, loading } = useOrderDetails(id);
   const order = data?.order;
+
+  useEffect(() => {
+    if (order) {
+      addRecentlyVisitedItem({
+        id,
+        type: "order",
+        name: `#${order.number}`,
+        url: orderUrl(id),
+      });
+    }
+  }, [id, order?.number]);
+
   const [orderConfirm, orderConfirmOpts] = useOrderConfirmMutation({
     onCompleted: data => {
       const errors = data.orderConfirm?.errors ?? [];

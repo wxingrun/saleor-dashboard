@@ -2,10 +2,12 @@
 import ActionDialog from "@dashboard/components/ActionDialog";
 import NotFoundPage from "@dashboard/components/NotFoundPage";
 import { WindowTitle } from "@dashboard/components/WindowTitle";
+import { addRecentlyVisitedItem } from "@dashboard/components/Sidebar/recentlyVisited/utils";
 import { useRemoveCustomerMutation, useUpdateCustomerMutation } from "@dashboard/graphql";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { useNotifier } from "@dashboard/hooks/useNotifier";
-import { extractMutationErrors, getStringOrPlaceholder } from "@dashboard/misc";
+import { extractMutationErrors, getStringOrPlaceholder, getUserName } from "@dashboard/misc";
+import { useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import CustomerDetailsPage, {
@@ -28,6 +30,20 @@ const CustomerDetailsViewInner = ({ id, params }: CustomerDetailsViewProps) => {
 
   const customerDetails = useCustomerDetails();
   const user = customerDetails?.customer?.user;
+
+  useEffect(() => {
+    if (user) {
+      const name = getUserName(user, true) || user.email || "";
+
+      addRecentlyVisitedItem({
+        id,
+        type: "customer",
+        name,
+        url: customerUrl(id),
+      });
+    }
+  }, [id, user?.email, user?.firstName, user?.lastName]);
+
   const customerDetailsLoading = customerDetails?.loading;
 
   const [removeCustomer, removeCustomerOpts] = useRemoveCustomerMutation({

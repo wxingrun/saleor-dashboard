@@ -1,0 +1,122 @@
+diff --git a/src/components/Sidebar/Content.tsx b/src/components/Sidebar/Content.tsx
+index 19a30d3f0..1b7e5d12c 100644
+--- a/src/components/Sidebar/Content.tsx
++++ b/src/components/Sidebar/Content.tsx
+@@ -5,6 +5,7 @@ import { Box } from "@saleor/macaw-ui-next";
+ import { DeprecationBanner } from "./DeprecationBanner/DeprecationBanner";
+ import { Menu } from "./menu";
+ import { MountingPoint } from "./MountingPoint";
++import { RecentlyVisited } from "./recentlyVisited/RecentlyVisited";
+ import { UserInfo } from "./user";
+ 
+ export const SidebarContent = () => {
+@@ -21,6 +22,7 @@ export const SidebarContent = () => {
+       <Box>
+         <MountingPoint />
+         <DeprecationBanner />
++        <RecentlyVisited />
+       </Box>
+       <Menu />
+       <UserInfo />
+diff --git a/src/customers/views/CustomerDetails.tsx b/src/customers/views/CustomerDetails.tsx
+index 110bbd0cd..4008fc559 100644
+--- a/src/customers/views/CustomerDetails.tsx
++++ b/src/customers/views/CustomerDetails.tsx
+@@ -2,10 +2,12 @@
+ import ActionDialog from "@dashboard/components/ActionDialog";
+ import NotFoundPage from "@dashboard/components/NotFoundPage";
+ import { WindowTitle } from "@dashboard/components/WindowTitle";
++import { addRecentlyVisitedItem } from "@dashboard/components/Sidebar/recentlyVisited/utils";
+ import { useRemoveCustomerMutation, useUpdateCustomerMutation } from "@dashboard/graphql";
+ import useNavigator from "@dashboard/hooks/useNavigator";
+ import { useNotifier } from "@dashboard/hooks/useNotifier";
+-import { extractMutationErrors, getStringOrPlaceholder } from "@dashboard/misc";
++import { extractMutationErrors, getStringOrPlaceholder, getUserName } from "@dashboard/misc";
++import { useEffect } from "react";
+ import { FormattedMessage, useIntl } from "react-intl";
+ 
+ import CustomerDetailsPage, {
+@@ -28,6 +30,20 @@ const CustomerDetailsViewInner = ({ id, params }: CustomerDetailsViewProps) => {
+ 
+   const customerDetails = useCustomerDetails();
+   const user = customerDetails?.customer?.user;
++
++  useEffect(() => {
++    if (user) {
++      const name = getUserName(user, true) || user.email || "";
++
++      addRecentlyVisitedItem({
++        id,
++        type: "customer",
++        name,
++        url: customerUrl(id),
++      });
++    }
++  }, [id, user?.email, user?.firstName, user?.lastName]);
++
+   const customerDetailsLoading = customerDetails?.loading;
+ 
+   const [removeCustomer, removeCustomerOpts] = useRemoveCustomerMutation({
+diff --git a/src/orders/views/OrderDetails/OrderDetails.tsx b/src/orders/views/OrderDetails/OrderDetails.tsx
+index 32af53763..7d5d25e3a 100644
+--- a/src/orders/views/OrderDetails/OrderDetails.tsx
++++ b/src/orders/views/OrderDetails/OrderDetails.tsx
+@@ -18,6 +18,8 @@ import { useNotifier } from "@dashboard/hooks/useNotifier";
+ import { getMutationState } from "@dashboard/misc";
+ import getOrderErrorMessage from "@dashboard/utils/errors/order";
+ import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
++import { addRecentlyVisitedItem } from "@dashboard/components/Sidebar/recentlyVisited/utils";
++import { useEffect } from "react";
+ import { useIntl } from "react-intl";
+ 
+ import OrderOperations from "../../containers/OrderOperations";
+@@ -52,6 +54,18 @@ const OrderDetails = ({ id, params }: OrderDetailsProps) => {
+   const handleBack = () => navigate(orderListUrl());
+   const { data, loading } = useOrderDetails(id);
+   const order = data?.order;
++
++  useEffect(() => {
++    if (order) {
++      addRecentlyVisitedItem({
++        id,
++        type: "order",
++        name: `#${order.number}`,
++        url: orderUrl(id),
++      });
++    }
++  }, [id, order?.number]);
++
+   const [orderConfirm, orderConfirmOpts] = useOrderConfirmMutation({
+     onCompleted: data => {
+       const errors = data.orderConfirm?.errors ?? [];
+diff --git a/src/products/views/ProductUpdate/ProductUpdate.tsx b/src/products/views/ProductUpdate/ProductUpdate.tsx
+index 096650c8e..7026284ee 100644
+--- a/src/products/views/ProductUpdate/ProductUpdate.tsx
++++ b/src/products/views/ProductUpdate/ProductUpdate.tsx
+@@ -53,6 +53,7 @@ import {
+ } from "../../urls";
+ import { createImageReorderHandler, createImageUploadHandler } from "./handlers";
+ import { useProductUpdateHandler } from "./handlers/useProductUpdateHandler";
++import { addRecentlyVisitedItem } from "@dashboard/components/Sidebar/recentlyVisited/utils";
+ import { productUpdatePageMessages as messages } from "./messages";
+ 
+ interface ProductUpdateProps {
+@@ -231,6 +232,18 @@ const ProductUpdate = ({ id, params }: ProductUpdateProps) => {
+     },
+   });
+   const product = data?.product;
++
++  useEffect(() => {
++    if (product) {
++      addRecentlyVisitedItem({
++        id,
++        type: "product",
++        name: product.name,
++        url: productUrl(id),
++      });
++    }
++  }, [id, product?.name]);
++
+   const [deleteMediaType, setDeleteMediaType] = useState<ProductMediaType | null>(null);
+ 
+   useEffect(() => {
