@@ -1,3 +1,372 @@
+diff --git a/1.7.1.patch b/1.7.1.patch
+new file mode 100644
+index 000000000..6008752b2
+--- /dev/null
++++ b/1.7.1.patch
+@@ -0,0 +1,363 @@
++diff --git a/src/components/Sidebar/Sidebar.test.tsx b/src/components/Sidebar/Sidebar.test.tsx
++index 8b9af0d19..7d5c492af 100644
++--- a/src/components/Sidebar/Sidebar.test.tsx
+++++ b/src/components/Sidebar/Sidebar.test.tsx
++@@ -6,8 +6,10 @@ import { ThemeProvider } from "@saleor/macaw-ui-next";
++ import { render, screen } from "@testing-library/react";
++ import userEvent from "@testing-library/user-event";
++ import { type ReactNode } from "react";
+++import { IntlProvider } from "react-intl";
++ import { MemoryRouter } from "react-router-dom";
++ 
+++import { RECENTLY_VISITED_STORAGE_KEY } from "./recentlyVisited";
++ import { Sidebar } from "./Sidebar";
++ import { SidebarProvider } from "./SidebarContext";
++ 
++@@ -54,44 +56,90 @@ jest.mock("@dashboard/ripples/state", () => ({
++ const Wrapper = ({ children }: { children: ReactNode }) => {
++   return (
++     <MemoryRouter>
++-      {/* @ts-expect-error - legacy types */}
++-      <LegacyThemeProvider>
++-        <ThemeProvider>
++-          <SidebarProvider>{children}</SidebarProvider>
++-        </ThemeProvider>
++-      </LegacyThemeProvider>
+++      <IntlProvider locale="en">
+++        {/* @ts-expect-error - legacy types */}
+++        <LegacyThemeProvider>
+++          <ThemeProvider>
+++            <SidebarProvider>{children}</SidebarProvider>
+++          </ThemeProvider>
+++        </LegacyThemeProvider>
+++      </IntlProvider>
++     </MemoryRouter>
++   );
++ };
++ 
++ describe("Sidebar", () => {
+++  beforeEach(() => {
+++    // Arrange
+++    localStorage.clear();
+++  });
+++
++   it("should render cloud environment link when is cloud instance", () => {
++     // Arrange
++     (useCloud as jest.Mock).mockImplementation(() => ({
++       isAuthenticatedViaCloud: true,
++     }));
+++
++     // Act
++     render(<Sidebar />, { wrapper: Wrapper });
+++
++     // Assert
++     expect(screen.getByTestId("cloud-environment-link")).toBeInTheDocument();
++   });
+++
++   it("should not render cloud environment link when is not cloud instance", () => {
++     // Arrange
++     (useCloud as jest.Mock).mockImplementation(() => ({
++       isAuthenticatedViaCloud: false,
++     }));
+++
++     // Act
++     render(<Sidebar />, { wrapper: Wrapper });
+++
++     // Assert
++     expect(screen.queryByTestId("cloud-environment-link")).not.toBeInTheDocument();
++   });
+++
++   it("should render keyboard shortcuts", () => {
++     // Arrange & Act
++     render(<Sidebar />, { wrapper: Wrapper });
+++
++     // Assert
++     expect(screen.getByText("Command menu")).toBeInTheDocument();
++     expect(screen.getByText("Playground")).toBeInTheDocument();
++   });
+++
+++  it("should render recently visited section when records exist", () => {
+++    // Arrange
+++    localStorage.setItem(
+++      RECENTLY_VISITED_STORAGE_KEY,
+++      JSON.stringify([
+++        {
+++          entityType: "product",
+++          id: "product-1",
+++          label: "Bean Juice",
+++          url: "/products/product-1?",
+++        },
+++      ]),
+++    );
+++
+++    // Act
+++    render(<Sidebar />, { wrapper: Wrapper });
+++
+++    // Assert
+++    expect(screen.getByTestId("recently-visited-section")).toBeInTheDocument();
+++    expect(screen.getByText("Recently visited")).toBeInTheDocument();
+++    expect(screen.getByText("Bean Juice")).toBeInTheDocument();
+++  });
+++
+++  it("should hide recently visited section when there are no records", () => {
+++    // Arrange & Act
+++    render(<Sidebar />, { wrapper: Wrapper });
+++
+++    // Assert
+++    expect(screen.queryByTestId("recently-visited-section")).not.toBeInTheDocument();
+++  });
+++
++   it("should call callback when click on playground shortcut", async () => {
++     // Arrange
++     const actionCallback = jest.fn();
++@@ -105,11 +153,14 @@ describe("Sidebar", () => {
++       setDevModeContent: jest.fn(),
++     }));
++     render(<Sidebar />, { wrapper: Wrapper });
+++
++     // Act
++     await userEvent.click(screen.getByText("Playground"));
+++
++     // Assert
++     expect(actionCallback).toHaveBeenCalledWith(true);
++   });
+++
++   it("should call callback when click on search shortcut", async () => {
++     // Arrange
++     const actionCallback = jest.fn();
++@@ -119,8 +170,10 @@ describe("Sidebar", () => {
++       setNavigatorVisibility: actionCallback,
++     }));
++     render(<Sidebar />, { wrapper: Wrapper });
+++
++     // Act
++     await userEvent.click(screen.getByText("Command menu"));
+++
++     // Assert
++     expect(actionCallback).toHaveBeenCalledWith(true);
++   });
++diff --git a/src/components/Sidebar/menu/Menu.tsx b/src/components/Sidebar/menu/Menu.tsx
++index 8f79afccc..076c28729 100644
++--- a/src/components/Sidebar/menu/Menu.tsx
+++++ b/src/components/Sidebar/menu/Menu.tsx
++@@ -1,11 +1,47 @@
++-import { Box, List } from "@saleor/macaw-ui-next";
+++import { commonMessages } from "@dashboard/intl";
+++import { Box, List, sprinkles, Text } from "@saleor/macaw-ui-next";
+++import { defineMessages, useIntl } from "react-intl";
+++import { Link, useLocation } from "react-router-dom";
++ 
+++import { useRecentlyVisitedEntries } from "../recentlyVisited";
++ import { Shortcusts } from "../shortcuts";
++ import { useMenuStructure } from "./hooks/useMenuStructure";
++ import { MenuItem } from "./Item";
++ 
+++const messages = defineMessages({
+++  recentlyVisited: {
+++    id: "sidebarRecentlyVisited",
+++    defaultMessage: "Recently visited",
+++    description: "sidebar section title for recently visited entities",
+++  },
+++  order: {
+++    id: "sidebarRecentlyVisitedOrder",
+++    defaultMessage: "Order",
+++    description: "entity type label in the sidebar recently visited section",
+++  },
+++  customer: {
+++    id: "sidebarRecentlyVisitedCustomer",
+++    defaultMessage: "Customer",
+++    description: "entity type label in the sidebar recently visited section",
+++  },
+++});
+++
++ export const Menu = () => {
+++  const intl = useIntl();
+++  const { pathname } = useLocation();
++   const menuStructure = useMenuStructure();
+++  const recentlyVisitedEntries = useRecentlyVisitedEntries();
+++
+++  const getEntityLabel = (entityType: (typeof recentlyVisitedEntries)[number]["entityType"]) => {
+++    switch (entityType) {
+++      case "product":
+++        return intl.formatMessage(commonMessages.product);
+++      case "order":
+++        return intl.formatMessage(messages.order);
+++      case "customer":
+++        return intl.formatMessage(messages.customer);
+++    }
+++  };
++ 
++   return (
++     <Box
++@@ -15,12 +51,57 @@ export const Menu = () => {
++       display="flex"
++       flexDirection="column"
++       justifyContent="space-between"
+++      gap={4}
++     >
++-      <List as="ol" display="grid" gap={1} data-test-id="menu-list">
++-        {menuStructure.map(menuItem => (
++-          <MenuItem menuItem={menuItem} key={menuItem.id} />
++-        ))}
++-      </List>
+++      <Box display="flex" flexDirection="column" gap={4}>
+++        {recentlyVisitedEntries.length > 0 && (
+++          <Box display="flex" flexDirection="column" gap={1} data-test-id="recently-visited-section">
+++            <Text size={2} fontWeight="medium" color="default2" paddingX={2}>
+++              {intl.formatMessage(messages.recentlyVisited)}
+++            </Text>
+++            <List as="ol" display="grid" gap={1} data-test-id="recently-visited-list">
+++              {recentlyVisitedEntries.map(entry => {
+++                const entryPath = entry.url.split("?")[0];
+++                const isActive = pathname === entryPath;
+++
+++                return (
+++                  <List.Item
+++                    key={`${entry.entityType}-${entry.id}`}
+++                    borderRadius={3}
+++                    paddingX={2}
+++                    active={isActive}
+++                    data-test-id={`recently-visited-item-${entry.entityType}-${entry.id}`}
+++                  >
+++                    <Link
+++                      to={entry.url}
+++                      replace={isActive}
+++                      className={sprinkles({
+++                        display: "block",
+++                        width: "100%",
+++                      })}
+++                    >
+++                      <Box display="flex" flexDirection="column" gap={0.5} paddingY={1.5}>
+++                        <Text size={1} color="default2">
+++                          {getEntityLabel(entry.entityType)}
+++                        </Text>
+++                        <Text size={3} fontWeight="medium">
+++                          {entry.label}
+++                        </Text>
+++                      </Box>
+++                    </Link>
+++                  </List.Item>
+++                );
+++              })}
+++            </List>
+++          </Box>
+++        )}
+++
+++        <List as="ol" display="grid" gap={1} data-test-id="menu-list">
+++          {menuStructure.map(menuItem => (
+++            <MenuItem menuItem={menuItem} key={menuItem.id} />
+++          ))}
+++        </List>
+++      </Box>
++ 
++       <Shortcusts />
++     </Box>
++diff --git a/src/customers/components/CustomerDetailsPage/CustomerDetailsPage.tsx b/src/customers/components/CustomerDetailsPage/CustomerDetailsPage.tsx
++index 64ae2ade0..97d03a4c3 100644
++--- a/src/customers/components/CustomerDetailsPage/CustomerDetailsPage.tsx
+++++ b/src/customers/components/CustomerDetailsPage/CustomerDetailsPage.tsx
++@@ -1,5 +1,6 @@
++ // @ts-strict-ignore
++ import { TopNav } from "@dashboard/components/AppLayout/TopNav";
+++import { useTrackRecentlyVisitedEntry } from "@dashboard/components/Sidebar/recentlyVisited";
++ import { Backlink } from "@dashboard/components/Backlink";
++ import { CardSpacer } from "@dashboard/components/CardSpacer";
++ import { type ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
++@@ -9,7 +10,7 @@ import { Pill } from "@dashboard/components/Pill";
++ import RequirePermissions from "@dashboard/components/RequirePermissions";
++ import { Savebar } from "@dashboard/components/Savebar";
++ import { useCanEditCustomers } from "@dashboard/customers/hooks/useCanEditCustomers";
++-import { customerAddressesUrl, customerListPath } from "@dashboard/customers/urls";
+++import { customerAddressesUrl, customerListPath, customerUrl } from "@dashboard/customers/urls";
++ import { AppWidgets } from "@dashboard/extensions/components/AppWidgets/AppWidgets";
++ import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
++ import { getExtensionsItemsForCustomerDetails } from "@dashboard/extensions/getExtensionsItems";
++@@ -141,6 +142,17 @@ const CustomerDetailsPage = ({
++   const menuItems = [...builtInMenuItems, ...extensionMenuItems];
++ 
++   const customerName = getUserName(customer, true);
+++
+++  useTrackRecentlyVisitedEntry(
+++    customer
+++      ? {
+++          entityType: "customer",
+++          id: customer.id,
+++          label: customerName || customer.email || customer.id,
+++          url: customerUrl(customer.id),
+++        }
+++      : null,
+++  );
++   // Mirrors OrderDetailsPage's title layout: name (+ optional Staff pill) on
++   // the left, "Member since" date as a lower-emphasis sibling on the right,
++   // both on the same line. Keeps the page's TopNav consistent with Orders.
++diff --git a/src/orders/components/OrderDetailsPage/OrderDetailsPage.tsx b/src/orders/components/OrderDetailsPage/OrderDetailsPage.tsx
++index 8645296d6..addf5e88c 100644
++--- a/src/orders/components/OrderDetailsPage/OrderDetailsPage.tsx
+++++ b/src/orders/components/OrderDetailsPage/OrderDetailsPage.tsx
++@@ -1,6 +1,7 @@
++ // @ts-strict-ignore
++ import { type FetchResult } from "@apollo/client";
++ import { TopNav } from "@dashboard/components/AppLayout/TopNav";
+++import { useTrackRecentlyVisitedEntry } from "@dashboard/components/Sidebar/recentlyVisited";
++ import { CardSpacer } from "@dashboard/components/CardSpacer";
++ import { type ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
++ import { useDevModeContext } from "@dashboard/components/DevModePanel/hooks";
++@@ -26,7 +27,7 @@ import useNavigator from "@dashboard/hooks/useNavigator";
++ import { defaultGraphiQLQuery } from "@dashboard/orders/queries";
++ import { rippleOrderMetadata } from "@dashboard/orders/ripples/orderMetadata";
++ import { orderShouldUseTransactions } from "@dashboard/orders/types";
++-import { orderListUrl } from "@dashboard/orders/urls";
+++import { orderListUrl, orderUrl } from "@dashboard/orders/urls";
++ import { OrderDiscountContext } from "@dashboard/products/components/OrderDiscountProviders/OrderDiscountProvider";
++ import { Divider } from "@saleor/macaw-ui-next";
++ import { useContext, useState } from "react";
++@@ -146,6 +147,18 @@ const OrderDetailsPage = (props: OrderDetailsPageProps) => {
++   const notAllowedToFulfillUnpaid =
++     shop?.fulfillmentAutoApprove && !shop?.fulfillmentAllowUnpaid && !order?.isPaid;
++   const unfulfilled = (order?.lines || []).filter(line => line.quantityToFulfill > 0);
+++
+++  useTrackRecentlyVisitedEntry(
+++    order
+++      ? {
+++          entityType: "order",
+++          id: order.id,
+++          label: `#${order.number}`,
+++          url: orderUrl(order.id),
+++        }
+++      : null,
+++  );
+++
++   const handleSubmit = async (data: MetadataIdSchema) => {
++     if (!onSubmit) {
++       return [];
++diff --git a/src/products/views/ProductUpdate/ProductUpdate.tsx b/src/products/views/ProductUpdate/ProductUpdate.tsx
++index 096650c8e..4c0c10821 100644
++--- a/src/products/views/ProductUpdate/ProductUpdate.tsx
+++++ b/src/products/views/ProductUpdate/ProductUpdate.tsx
++@@ -7,6 +7,7 @@ import { type InitialConstraints } from "@dashboard/components/ModalFilters/enti
++ import NotFoundPage from "@dashboard/components/NotFoundPage";
++ import { useShopLimitsQuery } from "@dashboard/components/Shop/queries";
++ import { WindowTitle } from "@dashboard/components/WindowTitle";
+++import { useTrackRecentlyVisitedEntry } from "@dashboard/components/Sidebar/recentlyVisited";
++ import { DEFAULT_INITIAL_SEARCH_DATA, VALUES_PAGINATE_BY } from "@dashboard/config";
++ import {
++   ErrorPolicyEnum,
++@@ -231,6 +232,18 @@ const ProductUpdate = ({ id, params }: ProductUpdateProps) => {
++     },
++   });
++   const product = data?.product;
+++
+++  useTrackRecentlyVisitedEntry(
+++    product
+++      ? {
+++          entityType: "product",
+++          id: product.id,
+++          label: product.name,
+++          url: productUrl(product.id),
+++        }
+++      : null,
+++  );
+++
++   const [deleteMediaType, setDeleteMediaType] = useState<ProductMediaType | null>(null);
++ 
++   useEffect(() => {
 diff --git a/src/components/Sidebar/Sidebar.test.tsx b/src/components/Sidebar/Sidebar.test.tsx
 index 8b9af0d19..7d5c492af 100644
 --- a/src/components/Sidebar/Sidebar.test.tsx
@@ -252,6 +621,243 @@ index 8f79afccc..076c28729 100644
  
        <Shortcusts />
      </Box>
+diff --git a/src/components/Sidebar/recentlyVisited.test.ts b/src/components/Sidebar/recentlyVisited.test.ts
+new file mode 100644
+index 000000000..f06e95a90
+--- /dev/null
++++ b/src/components/Sidebar/recentlyVisited.test.ts
+@@ -0,0 +1,88 @@
++import {
++  addRecentlyVisitedEntry,
++  readRecentlyVisitedEntries,
++  RECENTLY_VISITED_STORAGE_KEY,
++  type RecentlyVisitedEntry,
++} from "./recentlyVisited";
++
++const createEntry = (
++  id: string,
++  entityType: RecentlyVisitedEntry["entityType"],
++  label: string,
++): RecentlyVisitedEntry => ({
++  entityType,
++  id,
++  label,
++  url: `/${entityType}s/${id}?`,
++});
++
++describe("recentlyVisited", () => {
++  beforeEach(() => {
++    // Arrange
++    localStorage.clear();
++  });
++
++  it("should store most recent entries at the top", () => {
++    // Arrange
++    const productEntry = createEntry("product-1", "product", "Bean Juice");
++    const orderEntry = createEntry("order-1", "order", "#1001");
++    const customerEntry = createEntry("customer-1", "customer", "John Doe");
++
++    // Act
++    addRecentlyVisitedEntry(productEntry);
++    addRecentlyVisitedEntry(orderEntry);
++    addRecentlyVisitedEntry(customerEntry);
++
++    // Assert
++    expect(readRecentlyVisitedEntries()).toEqual([customerEntry, orderEntry, productEntry]);
++  });
++
++  it("should move duplicated entry to the top without adding duplicates", () => {
++    // Arrange
++    const productEntry = createEntry("product-1", "product", "Bean Juice");
++    const orderEntry = createEntry("order-1", "order", "#1001");
++
++    addRecentlyVisitedEntry(productEntry);
++    addRecentlyVisitedEntry(orderEntry);
++
++    // Act
++    addRecentlyVisitedEntry(productEntry);
++
++    // Assert
++    expect(readRecentlyVisitedEntries()).toEqual([productEntry, orderEntry]);
++  });
++
++  it("should keep only the latest five entries", () => {
++    // Arrange
++    const entries = [
++      createEntry("product-1", "product", "Bean Juice"),
++      createEntry("order-1", "order", "#1001"),
++      createEntry("customer-1", "customer", "John Doe"),
++      createEntry("product-2", "product", "Winter Jacket"),
++      createEntry("order-2", "order", "#1002"),
++      createEntry("customer-2", "customer", "Jane Doe"),
++    ];
++
++    // Act
++    entries.forEach(addRecentlyVisitedEntry);
++
++    // Assert
++    expect(readRecentlyVisitedEntries()).toEqual(entries.slice(1).reverse());
++  });
++
++  it("should read persisted entries from localStorage", () => {
++    // Arrange
++    const entries = [
++      createEntry("product-1", "product", "Bean Juice"),
++      createEntry("order-1", "order", "#1001"),
++    ];
++
++    localStorage.setItem(RECENTLY_VISITED_STORAGE_KEY, JSON.stringify(entries));
++
++    // Act
++    const result = readRecentlyVisitedEntries();
++
++    // Assert
++    expect(result).toEqual(entries);
++  });
++});
+diff --git a/src/components/Sidebar/recentlyVisited.ts b/src/components/Sidebar/recentlyVisited.ts
+new file mode 100644
+index 000000000..7d94d4f3f
+--- /dev/null
++++ b/src/components/Sidebar/recentlyVisited.ts
+@@ -0,0 +1,137 @@
++import { useEffect, useState } from "react";
++
++export const RECENTLY_VISITED_STORAGE_KEY = "dashboard-recently-visited";
++
++const RECENTLY_VISITED_EVENT = "dashboard-recently-visited-updated";
++const MAX_RECENTLY_VISITED_ITEMS = 5;
++
++export type RecentlyVisitedEntityType = "product" | "order" | "customer";
++
++export interface RecentlyVisitedEntry {
++  entityType: RecentlyVisitedEntityType;
++  id: string;
++  label: string;
++  url: string;
++}
++
++const recentlyVisitedEntityTypes: RecentlyVisitedEntityType[] = ["product", "order", "customer"];
++
++const isRecentlyVisitedEntityType = (
++  value: unknown,
++): value is RecentlyVisitedEntityType => recentlyVisitedEntityTypes.includes(value as RecentlyVisitedEntityType);
++
++const isRecentlyVisitedEntry = (value: unknown): value is RecentlyVisitedEntry => {
++  if (!value || typeof value !== "object") {
++    return false;
++  }
++
++  const entry = value as Partial<RecentlyVisitedEntry>;
++
++  return (
++    typeof entry.id === "string" &&
++    typeof entry.label === "string" &&
++    typeof entry.url === "string" &&
++    isRecentlyVisitedEntityType(entry.entityType)
++  );
++};
++
++const parseRecentlyVisitedEntries = (value: string | null): RecentlyVisitedEntry[] => {
++  if (!value) {
++    return [];
++  }
++
++  try {
++    const parsedValue = JSON.parse(value);
++
++    if (!Array.isArray(parsedValue)) {
++      return [];
++    }
++
++    return parsedValue.filter(isRecentlyVisitedEntry).slice(0, MAX_RECENTLY_VISITED_ITEMS);
++  } catch {
++    return [];
++  }
++};
++
++const notifyRecentlyVisitedChange = () => {
++  if (typeof window === "undefined") {
++    return;
++  }
++
++  window.dispatchEvent(new Event(RECENTLY_VISITED_EVENT));
++};
++
++const writeRecentlyVisitedEntries = (entries: RecentlyVisitedEntry[]) => {
++  if (typeof window === "undefined") {
++    return;
++  }
++
++  localStorage.setItem(RECENTLY_VISITED_STORAGE_KEY, JSON.stringify(entries));
++  notifyRecentlyVisitedChange();
++};
++
++const isSameRecentlyVisitedEntry = (
++  left: RecentlyVisitedEntry,
++  right: RecentlyVisitedEntry,
++) => left.entityType === right.entityType && left.id === right.id;
++
++export const readRecentlyVisitedEntries = (): RecentlyVisitedEntry[] => {
++  if (typeof window === "undefined") {
++    return [];
++  }
++
++  return parseRecentlyVisitedEntries(localStorage.getItem(RECENTLY_VISITED_STORAGE_KEY));
++};
++
++export const addRecentlyVisitedEntry = (entry: RecentlyVisitedEntry) => {
++  if (!entry.label.trim()) {
++    return;
++  }
++
++  const updatedEntries = [
++    entry,
++    ...readRecentlyVisitedEntries().filter(existingEntry => !isSameRecentlyVisitedEntry(existingEntry, entry)),
++  ].slice(0, MAX_RECENTLY_VISITED_ITEMS);
++
++  writeRecentlyVisitedEntries(updatedEntries);
++};
++
++export const useRecentlyVisitedEntries = () => {
++  const [entries, setEntries] = useState<RecentlyVisitedEntry[]>(() => readRecentlyVisitedEntries());
++
++  useEffect(() => {
++    if (typeof window === "undefined") {
++      return;
++    }
++
++    const syncEntries = () => {
++      setEntries(readRecentlyVisitedEntries());
++    };
++
++    const handleStorage = (event: StorageEvent) => {
++      if (event.key === null || event.key === RECENTLY_VISITED_STORAGE_KEY) {
++        syncEntries();
++      }
++    };
++
++    window.addEventListener("storage", handleStorage);
++    window.addEventListener(RECENTLY_VISITED_EVENT, syncEntries);
++
++    return () => {
++      window.removeEventListener("storage", handleStorage);
++      window.removeEventListener(RECENTLY_VISITED_EVENT, syncEntries);
++    };
++  }, []);
++
++  return entries;
++};
++
++export const useTrackRecentlyVisitedEntry = (entry: RecentlyVisitedEntry | null | undefined) => {
++  useEffect(() => {
++    if (!entry) {
++      return;
++    }
++
++    addRecentlyVisitedEntry(entry);
++  }, [entry?.entityType, entry?.id, entry?.label, entry?.url]);
++};
 diff --git a/src/customers/components/CustomerDetailsPage/CustomerDetailsPage.tsx b/src/customers/components/CustomerDetailsPage/CustomerDetailsPage.tsx
 index 64ae2ade0..97d03a4c3 100644
 --- a/src/customers/components/CustomerDetailsPage/CustomerDetailsPage.tsx
