@@ -86,7 +86,7 @@ export const squashLines = (items: GrantRefundInputLine[]): GrantRefundInputLine
       (acc, item) => ({
         ...acc,
         [item.id]: acc[item.id]
-          ? { ...item, quantity: acc[item.id].quantity + item.quantity }
+          ? { ...acc[item.id], quantity: acc[item.id].quantity + item.quantity }
           : item,
       }),
       {},
