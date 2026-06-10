@@ -120,4 +120,100 @@ describe("validateChannelFormData", () => {
       ]),
     );
   });
+
+  it("should return no error when slug contains uppercase letters, spaces, and special characters", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      slug: "INVALID-SLUG!@#$ with spaces",
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert
+    expect(errors).toEqual([]);
+  });
+
+  it("should return error when currencyCode is empty string", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      currencyCode: "",
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toEqual({
+      __typename: "ChannelError",
+      code: ChannelErrorCode.REQUIRED,
+      field: "currencyCode",
+      message: null,
+    });
+  });
+
+  it("should return no error when defaultCountry is an invalid ISO 3166-1 alpha-2 code", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      defaultCountry: "XX" as CountryCode,
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert
+    expect(errors).toEqual([]);
+  });
+
+  it("should return no error when defaultCountry is a valid ISO 3166-1 alpha-2 code CN", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      defaultCountry: CountryCode.CN,
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert
+    expect(errors).toEqual([]);
+  });
+
+  it("should return error when slug is empty string", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      slug: "",
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toEqual({
+      __typename: "ChannelError",
+      code: ChannelErrorCode.REQUIRED,
+      field: "slug",
+      message: null,
+    });
+  });
+
+  it("should return no error when slug length exceeds 50 characters", () => {
+    // Arrange
+    const data: FormData = {
+      ...validFormData,
+      slug: "a".repeat(51),
+    };
+
+    // Act
+    const errors = validateChannelFormData(data);
+
+    // Assert
+    expect(errors).toEqual([]);
+  });
 });
