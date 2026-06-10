@@ -5,6 +5,7 @@ import { Box } from "@saleor/macaw-ui-next";
 import { DeprecationBanner } from "./DeprecationBanner/DeprecationBanner";
 import { Menu } from "./menu";
 import { MountingPoint } from "./MountingPoint";
+import { RecentlyVisited } from "./RecentlyVisited";
 import { UserInfo } from "./user";
 
 export const SidebarContent = () => {
@@ -21,6 +22,7 @@ export const SidebarContent = () => {
       <Box>
         <MountingPoint />
         <DeprecationBanner />
+        <RecentlyVisited />
       </Box>
       <Menu />
       <UserInfo />

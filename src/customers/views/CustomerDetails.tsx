@@ -5,6 +5,7 @@ import { WindowTitle } from "@dashboard/components/WindowTitle";
 import { useRemoveCustomerMutation, useUpdateCustomerMutation } from "@dashboard/graphql";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { useNotifier } from "@dashboard/hooks/useNotifier";
+import { useRecentlyVisited } from "@dashboard/hooks/useRecentlyVisited";
 import { extractMutationErrors, getStringOrPlaceholder } from "@dashboard/misc";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -29,6 +30,12 @@ const CustomerDetailsViewInner = ({ id, params }: CustomerDetailsViewProps) => {
   const customerDetails = useCustomerDetails();
   const user = customerDetails?.customer?.user;
   const customerDetailsLoading = customerDetails?.loading;
+
+  useRecentlyVisited({
+    entityId: id,
+    entityName: user?.email || id,
+    entityType: "customer",
+  });
 
   const [removeCustomer, removeCustomerOpts] = useRemoveCustomerMutation({
     onCompleted: data => {

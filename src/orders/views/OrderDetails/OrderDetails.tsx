@@ -15,6 +15,7 @@ import {
 import useBackgroundTask from "@dashboard/hooks/useBackgroundTask";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { useNotifier } from "@dashboard/hooks/useNotifier";
+import { useRecentlyVisited } from "@dashboard/hooks/useRecentlyVisited";
 import { getMutationState } from "@dashboard/misc";
 import getOrderErrorMessage from "@dashboard/utils/errors/order";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
@@ -52,6 +53,12 @@ const OrderDetails = ({ id, params }: OrderDetailsProps) => {
   const handleBack = () => navigate(orderListUrl());
   const { data, loading } = useOrderDetails(id);
   const order = data?.order;
+
+  useRecentlyVisited({
+    entityId: id,
+    entityName: order?.number || id,
+    entityType: "order",
+  });
   const [orderConfirm, orderConfirmOpts] = useOrderConfirmMutation({
     onCompleted: data => {
       const errors = data.orderConfirm?.errors ?? [];

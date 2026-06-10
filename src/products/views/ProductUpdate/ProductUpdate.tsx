@@ -24,6 +24,7 @@ import {
 import { getSearchFetchMoreProps } from "@dashboard/hooks/makeTopLevelSearch/utils";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { useNotifier } from "@dashboard/hooks/useNotifier";
+import { useRecentlyVisited } from "@dashboard/hooks/useRecentlyVisited";
 import { commonMessages, errorMessages } from "@dashboard/intl";
 import { useSearchAttributeValuesSuggestions } from "@dashboard/searches/useAttributeValueSearch";
 import useCategorySearch from "@dashboard/searches/useCategorySearch";
@@ -232,6 +233,12 @@ const ProductUpdate = ({ id, params }: ProductUpdateProps) => {
   });
   const product = data?.product;
   const [deleteMediaType, setDeleteMediaType] = useState<ProductMediaType | null>(null);
+
+  useRecentlyVisited({
+    entityId: id,
+    entityName: product?.name || id,
+    entityType: "product",
+  });
 
   useEffect(() => {
     if (params.action !== "remove-media") {
