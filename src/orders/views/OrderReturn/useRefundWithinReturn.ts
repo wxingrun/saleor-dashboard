@@ -80,15 +80,25 @@ export function useRefundWithinReturn({
   };
 }
 
-export const squashLines = (items: GrantRefundInputLine[]): GrantRefundInputLine[] =>
-  Object.values(
-    items.reduce<Record<string, GrantRefundInputLine>>(
-      (acc, item) => ({
-        ...acc,
-        [item.id]: acc[item.id]
-          ? { ...item, quantity: acc[item.id].quantity + item.quantity }
-          : item,
-      }),
-      {},
-    ),
-  );
+export const squashLines = (items: GrantRefundInputLine[]): GrantRefundInputLine[] => {
+  const result: GrantRefundInputLine[] = [];
+  const indexById = new Map<string, number>();
+
+  for (const item of items) {
+    const existingIndex = indexById.get(item.id);
+
+    if (existingIndex === undefined) {
+      indexById.set(item.id, result.length);
+      result.push(item);
+    } else {
+      const existing = result[existingIndex];
+
+      result[existingIndex] = {
+        ...existing,
+        quantity: existing.quantity + item.quantity,
+      };
+    }
+  }
+
+  return result;
+};
