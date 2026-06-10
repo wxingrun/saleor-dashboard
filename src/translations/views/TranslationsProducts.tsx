@@ -1,4 +1,3 @@
-// @ts-strict-ignore
 import {
   type LanguageCodeEnum,
   useProductTranslationDetailsQuery,
@@ -9,6 +8,7 @@ import useNavigator from "@dashboard/hooks/useNavigator";
 import { useNotifier } from "@dashboard/hooks/useNotifier";
 import useShop from "@dashboard/hooks/useShop";
 import { getMultipleUrlValues, stringifyQs } from "@dashboard/utils/urls";
+// @ts-expect-error missing types for @editorjs/editorjs
 import { type OutputData } from "@editorjs/editorjs";
 import { useIntl } from "react-intl";
 
@@ -36,7 +36,7 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
   const productTranslations = useProductTranslationDetailsQuery({
     variables: { id, language: languageCode },
   });
-  const onUpdate = (errors: unknown[]) => {
+  const onUpdate = (errors: any[]) => {
     if (errors.length === 0) {
       productTranslations.refetch();
       notify({
@@ -46,10 +46,10 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
     }
   };
   const [updateTranslations, updateTranslationsOpts] = useUpdateProductTranslationsMutation({
-    onCompleted: data => onUpdate(data.productTranslate.errors),
+    onCompleted: data => onUpdate(data?.productTranslate?.errors || []),
   });
   const [updateAttributeValueTranslations] = useUpdateAttributeValueTranslationsMutation({
-    onCompleted: data => onUpdate(data.attributeValueTranslate.errors),
+    onCompleted: data => onUpdate(data?.attributeValueTranslate?.errors || []),
   });
   const onEdit = (field: string | string[]) =>
     navigate(

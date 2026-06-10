@@ -1,0 +1,95 @@
+diff --git a/src/translations/views/EntityLists/TranslationsProductList.tsx b/src/translations/views/EntityLists/TranslationsProductList.tsx
+index 7f8c2ad0a..ba66c62a9 100644
+--- a/src/translations/views/EntityLists/TranslationsProductList.tsx
++++ b/src/translations/views/EntityLists/TranslationsProductList.tsx
+@@ -1,5 +1,4 @@
+-// @ts-strict-ignore
+-import { useProductTranslationsQuery } from "@dashboard/graphql";
++import { type ProductTranslationsQuery, useProductTranslationsQuery } from "@dashboard/graphql";
+ import usePaginator, { PaginatorContext } from "@dashboard/hooks/usePaginator";
+ import TranslationsEntitiesList from "@dashboard/translations/components/TranslationsEntitiesList";
+ import { languageEntityUrl, TranslatableEntities } from "@dashboard/translations/urls";
+@@ -24,23 +23,27 @@ const TranslationsProductList = ({ params, variables }: TranslationsEntityListPr
+       <TranslationsEntitiesList
+         data-test-id="translation-list-view"
+         disabled={loading}
+-        entities={mapEdgesToItems(data?.translations)?.map(
+-          node =>
+-            node.__typename === "ProductTranslatableContent" && {
+-              completion: {
+-                current: sumCompleted([
+-                  node.translation?.description,
+-                  node.translation?.name,
+-                  node.translation?.seoDescription,
+-                  node.translation?.seoTitle,
+-                  ...(node.attributeValues?.map(({ translation }) => translation?.richText) || []),
+-                ]),
+-                max: 4 + (node.attributeValues?.length || 0),
+-              },
+-              id: node?.product?.id,
+-              name: node?.product?.name,
+-            },
+-        )}
++        entities={(mapEdgesToItems(data?.translations) || [])?.map(
++            (node: NonNullable<NonNullable<ProductTranslationsQuery["translations"]>["edges"]>[0]["node"]) => {
++              if (node?.__typename === "ProductTranslatableContent" && node.product) {
++                return {
++                 completion: {
++                   current: sumCompleted([
++                     node.translation?.description,
++                     node.translation?.name,
++                     node.translation?.seoDescription,
++                     node.translation?.seoTitle,
++                     ...(node.attributeValues?.map(({ translation }) => translation?.richText) || []),
++                   ]),
++                   max: 4 + (node.attributeValues?.length || 0),
++                 },
++                 id: node.product.id,
++                 name: node.product.name,
++               };
++             }
++             return null;
++           }
++         )?.filter((entity): entity is NonNullable<typeof entity> => entity !== null)}
+         getRowHref={id => languageEntityUrl(variables.language, TranslatableEntities.products, id)}
+       />
+     </PaginatorContext.Provider>
+diff --git a/src/translations/views/TranslationsProducts.tsx b/src/translations/views/TranslationsProducts.tsx
+index 34246a54d..e5843f9b2 100644
+--- a/src/translations/views/TranslationsProducts.tsx
++++ b/src/translations/views/TranslationsProducts.tsx
+@@ -1,4 +1,3 @@
+-// @ts-strict-ignore
+ import {
+   type LanguageCodeEnum,
+   useProductTranslationDetailsQuery,
+@@ -9,6 +8,7 @@ import useNavigator from "@dashboard/hooks/useNavigator";
+ import { useNotifier } from "@dashboard/hooks/useNotifier";
+ import useShop from "@dashboard/hooks/useShop";
+ import { getMultipleUrlValues, stringifyQs } from "@dashboard/utils/urls";
++// @ts-expect-error missing types for @editorjs/editorjs
+ import { type OutputData } from "@editorjs/editorjs";
+ import { useIntl } from "react-intl";
+ 
+@@ -36,7 +36,7 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
+   const productTranslations = useProductTranslationDetailsQuery({
+     variables: { id, language: languageCode },
+   });
+-  const onUpdate = (errors: unknown[]) => {
++  const onUpdate = (errors: any[]) => {
+     if (errors.length === 0) {
+       productTranslations.refetch();
+       notify({
+@@ -46,10 +46,10 @@ const TranslationsProducts = ({ id, languageCode, params }: TranslationsProducts
+     }
+   };
+   const [updateTranslations, updateTranslationsOpts] = useUpdateProductTranslationsMutation({
+-    onCompleted: data => onUpdate(data.productTranslate.errors),
++    onCompleted: data => onUpdate(data?.productTranslate?.errors || []),
+   });
+   const [updateAttributeValueTranslations] = useUpdateAttributeValueTranslationsMutation({
+-    onCompleted: data => onUpdate(data.attributeValueTranslate.errors),
++    onCompleted: data => onUpdate(data?.attributeValueTranslate?.errors || []),
+   });
+   const onEdit = (field: string | string[]) =>
+     navigate(
